@@ -23,7 +23,7 @@ GetOptions(
 );
 
 $SLOP = 50;
-$input_file = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+#$input_file = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
 
 my $USAGE = "USAGE: do_REVIEWS_callmotifsatvdrbvs.pl -i=<FUNSEQ_OUT> -slop=<INTERVAL>\n" .
 			"<FUNSEQ_OUT> vcf output of funseq with vdr-bvs\n" .
