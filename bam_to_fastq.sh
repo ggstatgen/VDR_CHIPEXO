@@ -1,0 +1,41 @@
+#!/bin/bash
+
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_DE3-A-VDR_-_-_XO111_SVR11-P001_Peconic20331hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_DE3-A-VDR_-_-_XO111_SVR11-P001_Peconic20331hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_DE3-A_-_-_XO111_SVR11-P001_Peconic20327hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_DE3-A_-_-_XO111_SVR11-P001_Peconic20327hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_DE3-B-VDR_-_-_XO211_SVR11-P001_Peconic20332hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_DE3-B-VDR_-_-_XO211_SVR11-P001_Peconic20332hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_DE3-B_-_-_XO211_SVR11-P001_Peconic20328hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_DE3-B_-_-_XO211_SVR11-P001_Peconic20328hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM06986_-_-_XO111_SVR11-P001_Peconic20301hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM06986_-_-_XO111_SVR11-P001_Peconic20301hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM06989_-_-_XO111_SVR11-P001_Peconic20302hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM06989_-_-_XO111_SVR11-P001_Peconic20302hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM06997_-_-_XO111_SVR11-P001_Peconic20303hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM06997_-_-_XO111_SVR11-P001_Peconic20303hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM07029_-_-_XO111_SVR11-P001_Peconic20304hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM07029_-_-_XO111_SVR11-P001_Peconic20304hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM07045_-_-_XO111_SVR11-P001_Peconic20305hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM07045_-_-_XO111_SVR11-P001_Peconic20305hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM10831_-_-_XO111_SVR11-P001_Peconic20306hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM10831_-_-_XO111_SVR11-P001_Peconic20306hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM10846_-_-_XO111_SVR11-P001_Peconic20307hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM10846_-_-_XO111_SVR11-P001_Peconic20307hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM10847_-_-_XO111_SVR11-P001_Peconic20308hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM10847_-_-_XO111_SVR11-P001_Peconic20308hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM11829_-_-_XO111_SVR11-P001_Peconic20309hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM11829_-_-_XO111_SVR11-P001_Peconic20309hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM11832_-_-_XO111_SVR11-P001_Peconic20310hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM11832_-_-_XO111_SVR11-P001_Peconic20310hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM11918_-_-_XO111_SVR11-P001_Peconic20311hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM11918_-_-_XO111_SVR11-P001_Peconic20311hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM11919_-_-_XO111_SVR11-P001_Peconic20312hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM11919_-_-_XO111_SVR11-P001_Peconic20312hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12264_-_-_XO111_SVR11-P001_Peconic20313hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12264_-_-_XO111_SVR11-P001_Peconic20313hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12383_-_-_XO111_SVR11-P001_Peconic20314hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12383_-_-_XO111_SVR11-P001_Peconic20314hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12489_-_-_XO111_SVR11-P001_Peconic20315hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12489_-_-_XO111_SVR11-P001_Peconic20315hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12716_-_-_XO111_SVR11-P001_Peconic20316hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12716_-_-_XO111_SVR11-P001_Peconic20316hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12752_-_-_XO111_SVR11-P001_Peconic20317hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12752_-_-_XO111_SVR11-P001_Peconic20317hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM12872_-_-_XO111_SVR11-P001_Peconic20319hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM12872_-_-_XO111_SVR11-P001_Peconic20319hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19189_-_-_XO111_SVR11-P001_Peconic20321hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19189_-_-_XO111_SVR11-P001_Peconic20321hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19190_-_-_XO111_SVR11-P001_Peconic20322hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19190_-_-_XO111_SVR11-P001_Peconic20322hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19191_-_-_XO111_SVR11-P001_Peconic20323hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19191_-_-_XO111_SVR11-P001_Peconic20323hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19213_-_-_XO111_SVR11-P001_Peconic20324hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19213_-_-_XO111_SVR11-P001_Peconic20324hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19214_-_-_XO111_SVR11-P001_Peconic20318hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19214_-_-_XO111_SVR11-P001_Peconic20318hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19215_-_-_XO111_SVR11-P001_Peconic20320hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19215_-_-_XO111_SVR11-P001_Peconic20320hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19235_-_-_XO111_SVR11-P001_Peconic20333hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19235_-_-_XO111_SVR11-P001_Peconic20333hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19236_-_-_XO111_SVR11-P001_Peconic20334hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19236_-_-_XO111_SVR11-P001_Peconic20334hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19237_-_-_XO111_SVR11-P001_Peconic20335hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19237_-_-_XO111_SVR11-P001_Peconic20335hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19247_-_-_XO111_SVR11-P001_Peconic20336hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19247_-_-_XO111_SVR11-P001_Peconic20336hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19248_-_-_XO111_SVR11-P001_Peconic20337hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19248_-_-_XO111_SVR11-P001_Peconic20337hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_GM19249_-_-_XO111_SVR11-P001_Peconic20338hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_GM19249_-_-_XO111_SVR11-P001_Peconic20338hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_LCL-A-VDR_-_-_XO111_SVR11-P001_Peconic20329hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_LCL-A-VDR_-_-_XO111_SVR11-P001_Peconic20329hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_LCL-A_-_-_XO111_SVR11-P001_Peconic20325hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_LCL-A_-_-_XO111_SVR11-P001_Peconic20325hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_LCL-B-VDR_-_-_XO211_SVR11-P001_Peconic20330hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_LCL-B-VDR_-_-_XO211_SVR11-P001_Peconic20330hg18.fq
+bamtools convert -in vitaminDreceptor_sc-1008_LCL_LCL-B_-_-_XO211_SVR11-P001_Peconic20326hg18.bam -format fastq > vitaminDreceptor_sc-1008_LCL_LCL-B_-_-_XO211_SVR11-P001_Peconic20326hg18.fq
+
