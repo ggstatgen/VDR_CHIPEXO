@@ -1,5 +1,7 @@
 #!/bin/sh
 
+#testing commit
+
 #java -jar vcf2diploid.jar -id sample_id -chr file.fa ... [-vcf file.vcf ...]
 
 #where sample_id is the ID of individual whose genome is being constructed
