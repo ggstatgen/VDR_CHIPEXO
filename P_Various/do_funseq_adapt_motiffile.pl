@@ -140,6 +140,7 @@ close $instream;
 ############
 my $counter_failscore = 0;
 my $counter_failinterval = 0;
+my $counter_successful = 0;
 open ($instream,  q{<}, $infile_ris) or die("Unable to open $infile_ris : $!");
 while(<$instream>){
 	chomp;
@@ -165,6 +166,7 @@ while(<$instream>){
 	
 	if(interval_contains_vdrbvs($chr, $motif_start, $motif_end, %variant_coords)){
 		print STDOUT $chr . "\t" . $motif_start . "\t" . $motif_end . "\t" .  $full_motif_id . "\t" . '.', "\t" . $motif_strand . "\t", $motif_name .  "\n";
+		$counter_successful += 1;
 	}else{
 		$counter_failinterval += 1;
 		next;	
@@ -174,6 +176,7 @@ close $instream;
 
 print STDERR "Number of .ris intervals discarded because of score: $counter_failscore\n";
 print STDERR "Number of .ris intervals discarded because no VDR-BV is in the PWM motif: $counter_failinterval\n";
+print STDERR "Number of .ris intervals kept in output: $counter_successful\n";
 print STDERR 'FINISHED.';
 
 #############
