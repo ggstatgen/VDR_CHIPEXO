@@ -15,7 +15,7 @@
 
 
 if [ ! $# == 4 ]; then
-	echo "Usage: `basename $0` <VDR_BV_PATH> <RIS_PATH> <ENCODE_PWM_FILE> <EXT> <MINSCORE>"
+	echo "Usage: `basename $0` <VDR_BV_PATH> <RIS_PATH> <ENCODE_PWM_FILE> <MINSCORE>"
 	echo "<VDR_BV_PATH> full path to the Output_noDBRECUR.vcf file of variants"
 	echo "<RIS_PATH> - absolute path for the pscanchip.ris files, one per TF"
 	echo "<ENCODE_PWM_FILE> text file with Jaspar PWMs in ENCODE format obtained with RSAT"
