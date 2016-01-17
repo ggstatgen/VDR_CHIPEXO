@@ -15,24 +15,24 @@
 
 
 if [ ! $# == 4 ]; then
-        echo "Usage: `basename $0` <PATH> <ENCODE_PWM_FILE> <EXT> <MINSCORE>"
-        echo "<PATH> - absolute path for the pscanchip.ris files, one per TF"
+	echo "Usage: `basename $0` <VDR_BV_PATH> <RIS_PATH> <ENCODE_PWM_FILE> <EXT> <MINSCORE>"
+	echo "<VDR_BV_PATH> full path to the Output_noDBRECUR.vcf file of variants"
+	echo "<RIS_PATH> - absolute path for the pscanchip.ris files, one per TF"
 	echo "<ENCODE_PWM_FILE> text file with Jaspar PWMs in ENCODE format obtained with RSAT"
-	echo "<EXT> specify file extension (eg ris or out or dat etc)";
 	echo "<MINSCORE> pscanchip score threshold for minimun motif score. NA if argument not needed"
 	echo "NOTE: this will only work with filenames with the structure Pscanchip_allsites_BVs_<TF>_<ID>_sites.<EXT>";
 	echo "so modify the filename accordingly";
-        exit
+	exit
 fi
 
-PDATA=$1;
-PPWM=$2;
-EXT=$3;
+PVCF=$1
+PDATA=$2;
+PPWM=$3;
 MINSCORE=$4;
 PCODE="/net/isi-backup/giuseppe/scripts/P_Various/do_funseq_adapt_motiffile.pl";
 
-for FILE in ${PDATA}/Pscanchip*.${EXT};
-        do
+for FILE in ${PDATA}/Pscanchip*.ris;
+	do
 	SEED=`echo ${FILE} | grep -Po "BVs_(.*)_sites"`;
 	TF=`echo ${SEED} | cut -d _ -f 2`;
 	ID=`echo ${SEED} | cut -d _ -f 3`;
@@ -47,12 +47,11 @@ for FILE in ${PDATA}/Pscanchip*.${EXT};
         echo '' >>${PDATA}/${SCRIPT};
 
 	if [ ${MINSCORE} == 'NA' ]; then 
-		echo "perl ${PCODE} -i=${FILE} -pwm=${PPWM} -id=${ID} -m=${TF}" >>${PDATA}/${SCRIPT};
+		echo "perl ${PCODE} -i_vcf=${PVCF} -i_ris=${FILE} -pwm=${PPWM} -id=${ID} -m=${TF}" >>${PDATA}/${SCRIPT};
 		nice -5 qsub -e ${PDATA}/script_adapt_motiffile_${TF}_${ID}_mscoreNA.err -o ${PDATA}/Pscanchip_funseqadapt_${TF}_${ID}_mscoreNA.out -q medium_jobs.q ${PDATA}/${SCRIPT};
 	else
-		echo "perl ${PCODE} -i=${FILE} -pwm=${PPWM} -id=${ID} -m=${TF} -s=${MINSCORE}" >>${PDATA}/${SCRIPT};
+		echo "perl ${PCODE} -i_vcf=${PVCF} -i_ris=${FILE} -pwm=${PPWM} -id=${ID} -m=${TF} -s=${MINSCORE}" >>${PDATA}/${SCRIPT};
 		nice -5 qsub -e ${PDATA}/script_adapt_motiffile_${TF}_${ID}_mscore${MINSCORE}.err -o ${PDATA}/Pscanchip_funseqadapt_${TF}_${ID}_mscore${MINSCORE}.out -q medium_jobs.q ${PDATA}/${SCRIPT};
 	fi
-	
-        rm ${PDATA}/${SCRIPT};  
+	rm ${PDATA}/${SCRIPT};  
 done

@@ -31,6 +31,7 @@ my $infile_snp;
 GetOptions(
 	'i=s'  =>\$infile_snp,
 );
+
 if(!$infile_snp){
      print "USAGE: do_alleleseq_generate_foo_CNV_file.pl -i=<INFILE>\n";
      print "<INFILE> variants in the .snv file generated with do_alleleseq_vcf2snp_cluster.sh\n";

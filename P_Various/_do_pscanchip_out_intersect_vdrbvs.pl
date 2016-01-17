@@ -4,6 +4,15 @@ use warnings;
 use File::Basename;
 use Getopt::Long;
 
+#OBSOLETE
+
+#/11/12/2015
+#I FOUND OUT THAT THE INTERVAL IN THE PSCANCHIP ris FILE CAN BE WRONG, DEPENDING ON THE TF considered!!!
+#the results of this file are probably redundant.
+
+#Actually, this is probably redundant. Funseq2 will already intersect the .ris intervals with the VDR-Bv, so you don't need this PRIOR to funseq2
+#This is useful to have an initial approximation of how many interesections you get AT DIFFERENT SCORES
+
 #30/11/2015
 #REVIEW point: RXR:VDR motifs under VDR-BVs
 
@@ -11,14 +20,6 @@ use Getopt::Long;
 #I cannot say this from the PscanChIP output, because the program extends ever 1nt VDR-BV left and right by 150nt.
 
 #This program will return a subset of the initial file having only the rows where the VDR-BV is INSIDE the motif found.
-
-#NOTE 
-#/11/12/2015
-#I FOUND OUT THAT THE INTERVAL IN THE PSCANCHIP ris FILE CAN BE WRONG, DEPENDING ON THE TF considered!!!
-##The only way to solve this is to have a file with the ACTUAL pwm sizes from Jaspar, indications are on the google drive doc
-#I generated one from the Jaspar and I link it here. You need to slurp it and count the sizes of the PWM and check the interval in the .ris file is correct
-#OTHERWISE FUNSEQ2 complains
-
 
 #format is as follows
 #CHR     REG_START       REG_END REG_STRAND      ABS_SITE_START  ABS_SITE_END    REL_SITE_START  REL_SITE_END    SITE_STRAND     SCORE   SITE
