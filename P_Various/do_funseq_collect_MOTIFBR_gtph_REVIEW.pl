@@ -152,7 +152,7 @@ $MOTIF_SIZE = scalar(@$ref);
 print STDERR "The length of the motif: $motif_name_id  according to the JASPAR Pwm is $MOTIF_SIZE\n";
 #now generate a vector as the one you had before
 for( my $i = 1; $i <= $MOTIF_SIZE; $i = $i + 1 ){
-	my $pos_string = 'pos_' . $i;
+	my $pos_string = $i;
 	push(@MOTIF_POSITIONS,$pos_string);
 }
 
@@ -372,9 +372,9 @@ foreach my $motif_pos (@MOTIF_POSITIONS){
 	                $sum_concordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{AGREE};
 	                $sum_discordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{DISAGREE};
 	        }
-	        print $outstream "$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
+	        print $outstream "pos_$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
 	}else{
-		print $outstream "$motif_pos\tNA\tNA\n";
+		print $outstream "pos_$motif_pos\tNA\tNA\n";
 	}	
 }
 #foreach my $motif_pos (sort {$a<=>$b}  keys %motifmodel_motifpos2geomicpos2concordance){
