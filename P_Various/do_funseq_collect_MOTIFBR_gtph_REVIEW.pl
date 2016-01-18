@@ -76,35 +76,37 @@ my $infile;
 my $INFILE_ALLELESEQ_RAW = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt";
 my $INPUT_VARIANTS = '/net/isi-scratch/giuseppe/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz';
 my $motif_name_id;
+my $JASPAR_ENCODE_FILE; #you will need this to infer the size of the pwm and fill the @MOTIF_POSITIONS array dynamically
 my $ENH_ONLY;
 my $subset_bed; #if you only want to collect data for positions in an external bed file (eg CLASS I sites)
 my $sym_variants; #flag, set it if you're dealing with sym variants
+
+#vector of possible motif positions - this will be hardcoded to a 15nt motif
+#I need this to insert 'NA's in the R output when for a position there is no data at all
+my @MOTIF_POSITIONS;
+my $MOTIF_SIZE;
+
 GetOptions(
         'i=s'      =>\$infile,
-	'm=s'      =>\$motif_name_id,
+		'm=s'      =>\$motif_name_id,
         'subset=s' =>\$subset_bed,
+		'j=s'      =>\$JASPAR_ENCODE_FILE,        
         'sym'      =>\$sym_variants,
         'enh'      =>\$ENH_ONLY
 ); 
+my $USAGE = "USAGE: do_funseq_collect_MOTIFBR_gtph.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -<JASPAR_ENCODE_PWM> -subset=<SUBSET_BED> -sym -enh\n" .
+			"<INFILE> vcf output of funseq2\n" .
+			"<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id>, e.g.: NFYA_MA0060.1\n" .
+			"<JASPAR_ENCODE_PWM> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)\n" .
+			"(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n" .
+			"(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)\n" .
+			"(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
 
-if(!$infile){
-	print "USAGE: do_funseq_collect_MOTIFBR_gtph.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -subset=<SUBSET_BED> -sym -enh\n";
-	print "<INFILE> vcf output of funseq2\n";
-	print "<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id>, e.g.: NFYA_MA0060.1\n";
-	print "(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n";
-	print "(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)\n";
-	print "(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
+unless($infile && $motif_name_id && $JASPAR_ENCODE_FILE){
+	print STDERR $USAGE, "\n";
 	exit 1;
 }
-if(!$motif_name_id){
-        print "USAGE: do_funseq_collect_MOTIFBR_gtph.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -subset=<SUBSET_BED> -sym -enh\n";
-        print "<INFILE> vcf output of funseq2\n";
-        print "<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id>, e.g.: NFYA_MA0060.1\n";
-        print "(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n";
-        print "(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)\n";
-        print "(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
-        exit 1;
-}
+
 my($basename, $directory) = fileparse($infile);
 $basename =~ s/(.*)\..*/$1/;
 my $output;
@@ -117,10 +119,43 @@ if($subset_bed){
 	$output  = $directory . $basename . '_' . $motif_name_id . '_concordance_all.Rdata';
 }
 
+###############
+#0 obtain pwm size from Jaspar encode file and create vector of positions
+###############
+my %jaspar_encode_motif;
+my $A = 1; my $C = 2; my $G = 3; my $T = 4;
+my $prev_name; my @info; my $temp;
+#slurp pwm file
+open (my $inpwm,  q{<}, $JASPAR_ENCODE_FILE) or die("Unable to open $JASPAR_ENCODE_FILE : $!");
+while(<$inpwm>){
+	chomp $_;
+	if(/^>/){
+		$prev_name = (split/>|\s+/,$_)[1];
+	}else{
+		@info = split/\s+/,$_;
+		if(not exists $jaspar_encode_motif{$prev_name}){
+			$jaspar_encode_motif{$prev_name}->[0] = {(A=>$info[$A], T=>$info[$T], C=>$info[$C], G=>$info[$G])};
+		}else{
+			$temp = $jaspar_encode_motif{$prev_name};
+			$jaspar_encode_motif{$prev_name}->[scalar(@$temp)] = {(A=>$info[$A], T=>$info[$T], C=>$info[$C],G=>$info[$G])};
+		}
+	}
+}
+close $inpwm;
+
 #modify the motif_name_id - you had replaced the :: with a '-' in the file names, to make it work with the SGE. Replace those :: again
 my ($motif_name,$motif_id) = split('_', $motif_name_id);
 $motif_name =~ s/\-/\:\:/;
 $motif_name_id = $motif_name . '_' . $motif_id;
+my $ref = $jaspar_encode_motif{$motif_name_id};
+$MOTIF_SIZE = scalar(@$ref);
+print STDERR "The length of the motif: $motif_name_id  according to the JASPAR Pwm is $MOTIF_SIZE\n";
+#now generate a vector as the one you had before
+for( my $i = 1; $i <= $MOTIF_SIZE; $i = $i + 1 ){
+	my $pos_string = 'pos_' . $i;
+	push(@MOTIF_POSITIONS,$pos_string);
+}
+
 
 ################
 #0 if there is a bed file with peaks (eg class I peaks) save their coordinates in hash
@@ -322,9 +357,13 @@ while(<$instream>){
 }
 close $instream;
 
+
+
+
 open (my $outstream,  q{>}, $output) or die("Unable to open $output : $!");
 print $outstream "MOTIF_POS\tCONCORDANT\tDISCORDANT\n";
-foreach my $motif_pos (sort {$a<=>$b}  keys %motifmodel_motifpos2geomicpos2concordance){
+
+foreach my $motif_pos (@MOTIF_POSITIONS){
 	if($motifmodel_motifpos2geomicpos2concordance{$motif_pos}){
 	        my $sum_concordant_for_this_motif_pos = 0;
 	        my $sum_discordant_for_this_motif_pos = 0;
@@ -333,12 +372,30 @@ foreach my $motif_pos (sort {$a<=>$b}  keys %motifmodel_motifpos2geomicpos2conco
 	                $sum_concordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{AGREE};
 	                $sum_discordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{DISAGREE};
 	        }
-	        print $outstream "pos_$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
+	        print $outstream "$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
 	}else{
-		print $outstream "pos_$motif_pos\tNA\tNA\n";
-	}
+		print $outstream "$motif_pos\tNA\tNA\n";
+	}	
 }
+#foreach my $motif_pos (sort {$a<=>$b}  keys %motifmodel_motifpos2geomicpos2concordance){
+#	if($motifmodel_motifpos2geomicpos2concordance{$motif_pos}){
+#	        my $sum_concordant_for_this_motif_pos = 0;
+#	        my $sum_discordant_for_this_motif_pos = 0;
+#
+#	        foreach my $genomic_pos (sort keys %{ $motifmodel_motifpos2geomicpos2concordance{$motif_pos} }){
+#	                $sum_concordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{AGREE};
+#	                $sum_discordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{DISAGREE};
+#	        }
+#	        print $outstream "pos_$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
+#	}else{
+#		print $outstream "pos_$motif_pos\tNA\tNA\n";
+#	}
+#}
 close $outstream;
+
+
+
+
 
 #subroutines===============================================================================
 

@@ -15,10 +15,11 @@
 #(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)
 
 
-if [ ! $# == 3 ]; then
-        echo "Usage: `basename $0` <FUNSEQ_OUT_VCF_PATH> <PWM_PATH> <ASYM|SYM>"
+if [ ! $# == 4 ]; then
+	echo "Usage: `basename $0` <FUNSEQ_OUT_VCF_PATH> <PWM_PATH> <JASPAR_ENCODE_FILE> <ASYM|SYM>"
 	echo "<FUNSEQ_OUT_VCF> - path to the vcf file with the annotated variants"
-        echo "<PWM_PATH> - absolute path for the pscanchip files (.ris extension), one per TF"
+	echo "<PWM_PATH> - absolute path for the pscanchip files (.ris extension), one per TF"
+	echo "<JASPAR_ENCODE_FILE> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)"        
 	echo "<ASYM|SYM> one of [asym|sym]"
 	echo "NOTE1: the vcf file is assumed to be called Output_noDBRECUR.vcf. Modify if not";
 	echo "NOTE2: this will only work with filenames with the structure Pscanchip_allsites_BVs_<TF>_<ID>_sites.<EXT>";
@@ -28,7 +29,9 @@ fi
 
 PVCF=$1;
 PDATA=$2;
-PSYMASYM=$3;
+PJASPARPWMS=$3;
+PSYMASYM=$4;
+
 FUNSEQ_FILE="Output_noDBRECUR.vcf";
 PCODE="/net/isi-backup/giuseppe/scripts/P_Various/do_funseq_collect_MOTIFBR_gtph_REVIEW.pl";
 
@@ -46,10 +49,10 @@ for FILE in ${PDATA}/Pscanchip*.ris;
 
 	if [ "${PSYMASYM}" = "asym"  ]
 	then
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID}" >>${PVCF}/${SCRIPT};
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS}" >>${PVCF}/${SCRIPT};
 	elif [ "${PSYMASYM}" = "sym"  ]
 	then
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -sym" >>${PVCF}/${SCRIPT};
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS} -sym" >>${PVCF}/${SCRIPT};
 	else
 		echo "field <ASYM|SYM> not recognised. Aborting."
 		exit 1

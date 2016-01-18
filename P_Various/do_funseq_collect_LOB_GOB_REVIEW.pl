@@ -80,10 +80,8 @@ my $sym_variants; #flag, set it if you're dealing with sym variants
 
 #vector of possible motif positions - this will be hardcoded to a 15nt motif
 #I need this to insert 'NA's in the R output when for a position there is no data at all
-#my @MOTIF_POSITIONS = ("pos_1", "pos_2", "pos_3", "pos_4", "pos_5", "pos_6", "pos_7", "pos_8", "pos_9", "pos_10", "pos_11", "pos_12", "pos_13", "pos_14", "pos_15");
 my @MOTIF_POSITIONS;
 my $MOTIF_SIZE;
-#my $MOTIF_SIZE = 15;
 
 GetOptions(
         'i=s'      =>\$infile,
@@ -93,35 +91,17 @@ GetOptions(
         'sym'      =>\$sym_variants,
         'enh'      =>\$ENH_ONLY
 ); 
-if(!$infile){
-	print "USAGE: do_funseq_collect_LOB_GOB.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -j=<JASPAR_ENCODE_PWM> -subset=<SUBSET_BED> -sym -enh\n";
-	print "<INFILE> vcf output of funseq2\n";
-	print "<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id> e.g.: NFYA_MA0060.1\n";
-	print "<JASPAR_ENCODE_PWM> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)\n";
-	print "(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n";
-	print "(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)";
-	print "(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
+my $USAGE = "USAGE: do_funseq_collect_LOB_GOB.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -j=<JASPAR_ENCODE_PWM> -subset=<SUBSET_BED> -sym -enh\n" .
+			"<INFILE> vcf output of funseq2\n" .
+			"<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id> e.g.: NFYA_MA0060.1\n" .
+			"<JASPAR_ENCODE_PWM> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)\n" .
+			"(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n" .
+			"(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)" .
+			"(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
+
+unless($infile && $JASPAR_ENCODE_FILE && $motif_name_id){
+	print STDERR $USAGE, "\n";
 	exit 1;
-}
-if(!$JASPAR_ENCODE_FILE){
-        print "USAGE: do_funseq_collect_LOB_GOB.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -j=<JASPAR_ENCODE_PWM> -subset=<SUBSET_BED> -sym -enh\n";
-        print "<INFILE> vcf output of funseq2\n";
-        print "<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id> e.g.: NFYA_MA0060.1\n";
-        print "<JASPAR_ENCODE_PWM> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)\n";
-        print "(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n";
-        print "(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)";
-        print "(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
-        exit 1;
-}
-if(!$motif_name_id){
-        print "USAGE: do_funseq_collect_LOB_GOB.pl -i=<INFILE> -m=<MOTIF_NAME_ID> -j=<JASPAR_ENCODE_PWM> -subset=<SUBSET_BED> -sym -enh\n";
-        print "<INFILE> vcf output of funseq2\n";
-        print "<MOTIF_NAME_ID> Jaspar name and Jaspar id for the pwm to consider. Must be in the form <name_id> e.g.: NFYA_MA0060.1\n";
-        print "<JASPAR_ENCODE_PWM> file containing the pwm desired in the ENCODE format, converted from the Jaspar format with RSA-tools (see gdrive for details)\n";
-        print "(optional)<SUBSET_BED> only collect data for VDR-BVs breaking motifs intersecting with this bed file(default=no)\n";
-        print "(optional)<sym> flag; set it if you are dealing with SYM variants from alleleseq (default=no)";
-        print "(optional)<enh> whether to only use snps with NCENC=enhancer (default=no)\n";
-        exit 1;
 }
 my($basename, $directory) = fileparse($infile);
 $basename =~ s/(.*)\..*/$1/;
@@ -503,9 +483,6 @@ if($sym_variants){
 	$TYPE_BR  = 'MOTIFBR_SYM';
 	$TYPE_LOB = 'LOB_SYM';
 	$TYPE_GOB = 'GOB_SYM';
-#	$TYPE_BR  = 'SYM';
-#	$TYPE_LOB = 'SYM';
-#	$TYPE_GOB = 'SYM';	
 }else{
 	$TYPE_BR  = 'MOTIFBR';
 	$TYPE_LOB = 'LOB';
