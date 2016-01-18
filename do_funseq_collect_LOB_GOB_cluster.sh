@@ -40,14 +40,14 @@ for FILE in ${PDATA}/Pscanchip*.ris;
         echo '#!/bin/bash' >>${PVCF}/${SCRIPT};
         echo '' >>${PVCF}/${SCRIPT};
 
-	#for SYM variants
+	#for ASYM variants
 	if [ "${PSYMASYM}" = "asym" ]
 	then
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS} -sym" >>${PVCF}/${SCRIPT};
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS}" >>${PVCF}/${SCRIPT};
 	elif [  "${PSYMASYM}" = "sym" ]
 	then
-	#for ASYM variants
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS}" >>${PVCF}/${SCRIPT};
+	#for SYM variants
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -i=${PVCF}/${FUNSEQ_FILE} -m=${TF}_${ID} -j=${PJASPARPWMS} -sym" >>${PVCF}/${SCRIPT};
 	else
 		echo "field <ASYM|SYM> not recognised. Aborting."
 		exit 1

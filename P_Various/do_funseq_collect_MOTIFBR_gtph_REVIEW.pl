@@ -325,14 +325,18 @@ close $instream;
 open (my $outstream,  q{>}, $output) or die("Unable to open $output : $!");
 print $outstream "MOTIF_POS\tCONCORDANT\tDISCORDANT\n";
 foreach my $motif_pos (sort {$a<=>$b}  keys %motifmodel_motifpos2geomicpos2concordance){
-	my $sum_concordant_for_this_motif_pos = 0;
-	my $sum_discordant_for_this_motif_pos = 0;
-	
-	foreach my $genomic_pos (sort keys %{ $motifmodel_motifpos2geomicpos2concordance{$motif_pos} }){
-		$sum_concordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{AGREE};
-		$sum_discordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{DISAGREE};
+	if($motifmodel_motifpos2geomicpos2concordance{$motif_pos}){
+	        my $sum_concordant_for_this_motif_pos = 0;
+	        my $sum_discordant_for_this_motif_pos = 0;
+
+	        foreach my $genomic_pos (sort keys %{ $motifmodel_motifpos2geomicpos2concordance{$motif_pos} }){
+	                $sum_concordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{AGREE};
+	                $sum_discordant_for_this_motif_pos += $motifmodel_motifpos2geomicpos2concordance{$motif_pos}{$genomic_pos}{DISAGREE};
+	        }
+	        print $outstream "pos_$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
+	}else{
+		print $outstream "pos_$motif_pos\tNA\tNA\n";
 	}
-	print $outstream "pos_$motif_pos\t$sum_concordant_for_this_motif_pos\t$sum_discordant_for_this_motif_pos\n";
 }
 close $outstream;
 
