@@ -5,9 +5,11 @@ use File::Basename;
 use Getopt::Long;
 use IO::Zlib;
 
+#23/1/2016 try to implement MOTIFG cases?
+
 #23/3/2015 Chris wants me to discard all positions that do not have ancestral state. Maybe count them to see how many are there?
 
-#8/1/2015 This uses ALL VDR-BVS intersecting any VDR:RXR motif instance - not only MOTIFBRs!! Therefore for most of these you won't have a motif break score
+#8/1/2015 This uses ALL VDR-BVS intersecting any VDR:RXR motif instance - not only MOTIFBRs Therefore for most of these you won't have a motif break score
 
 #14/1/2015: Chris P: label those that break the motif in some way DONE
 #14/1/2015: Make it possible to only select instances intersecting class I or II VDR peaks DONE 
@@ -342,6 +344,7 @@ close $instream;
 my %motifmodel_motifpos2geomicpos2FC_LOB;
 my %motifmodel_motifpos2geomicpos2FC_GOB;
 my %motifmodel_motifpos2geomicpos2FC_MOTIFBR;
+my %motifmodel_motifpos2geomicpos2FC_MOTIFG;
 open ($instream,  q{<}, $infile) or die("Unable to open $infile : $!");
 while(<$instream>){
 	chomp;
@@ -353,8 +356,7 @@ while(<$instream>){
 	next unless($_ =~ /$SEARCH_STRING_motif_name_id/);
 	#next unless($_ =~ /TFM\(VDR\|VDR_JASPAR/); #TODO HARDCODED VDR_JASPAR
 	
-	my $info_ncenc;
-	my $info_motifbr;
+	my $info_ncenc; my $info_motifbr; my $info_motifg;
 	my ($chr, $pos, $rs_id, $info) = (split /\t/)[0,1,2,7];
 	#FILTER: BED
 	if($subset_bed){ next unless(defined check_coords_in_bed($chr, $pos)); }
@@ -370,6 +372,7 @@ while(<$instream>){
 	foreach my $item (@info){
 		$info_ncenc = $item if( ($item =~ /^NCENC/)     &&  ($item =~ /$SEARCH_STRING_motif_name_id/) );
 		$info_motifbr = $item if( ($item =~ /^MOTIFBR/) &&  ($item =~ /$SEARCH_STRING_motif_name/));
+		$info_motifg = $item if( ($item =~ /^MOTIFG/) &&  ($item =~ /$SEARCH_STRING_motif_name/));
 		#$info_ncenc = $item if( ($item =~ /^NCENC/)     &&  ($item =~ /TFM\(VDR\|VDR_JASPAR\|(.*)\)/) ); 
 		#$info_motifbr = $item if( ($item =~ /^MOTIFBR/) && ($item =~ /VDR_JASPAR/));			
 	}
@@ -379,35 +382,9 @@ while(<$instream>){
 	
 	#MOTIFBR=NFYA#NFYA_MA0060.1#73020282#73020298#-#11#0.100#0.600,NR4A2#NR4A2_MA0160.1#73020285#73020293#-#6#0.000#0.900
 	if($info_motifbr){#===================================================================================================
-		my ($motif_change_type,$motif_change_byTF) = split("=", $info_motifbr);
-		my @motif_change_byTF = split(",", $motif_change_byTF);
-		
-		foreach my $item (@motif_change_byTF){
-			my ($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);
-			next unless( $TF_motif eq $motif_name_id);
-			next if(!$TF_motif_strand);
-			next unless( ($TF_motif_strand eq '-') or ($TF_motif_strand eq '+') );
-			
-			if(!$position2sample2readdepth{$genomic_coord}){
-				print STDERR "$rs_id - $genomic_coord: no ancestral/derived info available for this VDR-BV. Skipping..\n";
-				next;
-			}		
-			
-			$hit_position = get_hit_position($TF_motif_strand, $TF_snp_position);
-			my @rd_fc_MOTIFBR; my $fc_MOTIFBR_this_asb_snp;
-			#get read depth vector at this position for all samples
-			foreach my $sample (sort keys %{ $position2sample2readdepth{$genomic_coord} }){
-				my ($values, $fc) = process_read_data($position2sample2readdepth{$genomic_coord}{$sample}, $sample, $rs_id);
-				if($fc){
-					push(@rd_fc_MOTIFBR, $values);
-					$fc_MOTIFBR_this_asb_snp = join(",",@rd_fc_MOTIFBR);
-					$motifmodel_motifpos2geomicpos2FC_MOTIFBR{$hit_position}{$genomic_coord} = $fc_MOTIFBR_this_asb_snp;
-				}else{
-					print "Warning fold change value $fc is empty or undefined. Skipping..\n";
-					next;
-				}
-			}
-		}	
+		process_motif_break_or_gain_string($info_motifbr, $rs_id, $genomic_coord, 'MOTIFBR');
+	}elsif($info_motifg){
+		process_motif_break_or_gain_string($info_motifg, $rs_id, $genomic_coord, 'MOTIFG');	
 	}else{ #no motifbr - get hit and coordinates manually =================================================================
 		my $motif_coordinates;
 		my $TF_motif_strand;
@@ -417,7 +394,7 @@ while(<$instream>){
 		my @ncenc_data = split(",", $ncenc_data);
 		
 		foreach my $item (@ncenc_data){
-			#if($item =~ /TFM\(VDR\|VDR_JASPAR\|(.*)\)/){ #TODO HARDCODED VDR_JASPAR
+			#if($item =~ /TFM\(VDR\|VDR_JASPAR\|(.*)\)/){
 			if($item =~ /$SEARCH_STRING_motif_name_id/){
 				my @fields = split("\\|", $item);
 				$motif_coordinates = $fields[2]; chop $motif_coordinates;
@@ -478,13 +455,15 @@ close $instream;
 #motifbr	pos_1	1.1
 #...
 
-my $TYPE_BR;my $TYPE_LOB; my $TYPE_GOB;
+my $TYPE_BR; my $TYPE_G; my $TYPE_LOB; my $TYPE_GOB;
 if($sym_variants){
 	$TYPE_BR  = 'MOTIFBR_SYM';
+	$TYPE_G   = 'MOTIFG_SYM';
 	$TYPE_LOB = 'LOB_SYM';
 	$TYPE_GOB = 'GOB_SYM';
 }else{
 	$TYPE_BR  = 'MOTIFBR';
+	$TYPE_G   = 'MOTIFG';
 	$TYPE_LOB = 'LOB';
 	$TYPE_GOB = 'GOB';
 }
@@ -506,6 +485,21 @@ foreach my $motif_pos (@MOTIF_POSITIONS){
 		}		
 	}else{
 		print $outstream "$TYPE_BR\t$motif_pos\tNA\tNA\n";
+	}
+}
+#motifg
+foreach my $motif_pos (@MOTIF_POSITIONS){
+	if($motifmodel_motifpos2geomicpos2FC_MOTIFG{$motif_pos}){
+		my $all_fc_values_for_this_motif_pos = '';
+		foreach my $genomic_pos (sort keys %{ $motifmodel_motifpos2geomicpos2FC_MOTIFG{$motif_pos} }){
+			my @fc = split(",", $motifmodel_motifpos2geomicpos2FC_MOTIFG{$motif_pos}{$genomic_pos});
+			foreach my $fc_value (@fc){
+				my ($val_ref, $val_alt) = split('-', $fc_value);
+				print $outstream "$TYPE_G\t$motif_pos\t$val_ref\t$val_alt\n";
+			}
+		}		
+	}else{
+		print $outstream "$TYPE_G\t$motif_pos\tNA\tNA\n";
 	}
 }
 #lob
@@ -544,6 +538,57 @@ close $outstream;
 
 
 #subroutine===============================================================================
+
+#since I do the same for MOTIFBR and MOTIFG I will put the stuff here
+sub process_motif_break_or_gain_string{
+	my ($this_string, $this_rsid, $these_coords, $this_event_type) = @_;
+	my $hit_position;
+
+	my ($motif_change_type,$motif_change_byTF) = split("=", $this_string);
+	my @motif_change_byTF = split(",", $motif_change_byTF);
+	
+	foreach my $item (@motif_change_byTF){
+		my ($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);
+		next unless( $TF_motif eq $motif_name_id);
+		next if(!$TF_motif_strand);
+		next unless( ($TF_motif_strand eq '-') or ($TF_motif_strand eq '+') );
+		
+		if(!$position2sample2readdepth{$these_coords}){
+			print STDERR "$this_rsid - $these_coords: no ancestral/derived info available for this VDR-BV. Skipping..\n";
+			next;
+		}		
+		
+		$hit_position = get_hit_position($TF_motif_strand, $TF_snp_position);
+		#get read depth vector at this position for all samples
+		foreach my $sample (sort keys %{ $position2sample2readdepth{$these_coords} }){
+			my @rd_fc_MOTIF_EVENT; my $fc_MOTIF_EVENT_this_asb_snp;
+			my ($values, $fc) = process_read_data($position2sample2readdepth{$these_coords}{$sample}, $sample, $this_rsid);
+			#by definition, MOTIFBR cases are significant LOB - in other words, a MOTIFBR MUST have fc >=1 (r_anc >= r_der)
+			#whereas MOTIFG cases are significant GOB - so they must have fc < 1
+			#For the purpose of later plotting, I will remove discordant cases
+			if($fc){
+				if( ($fc >= 1) && $this_event_type eq 'MOTIFBR' ){
+					push(@rd_fc_MOTIF_EVENT, $values);
+					$fc_MOTIF_EVENT_this_asb_snp = join(",",@rd_fc_MOTIF_EVENT);
+					$motifmodel_motifpos2geomicpos2FC_MOTIFBR{$hit_position}{$these_coords} = $fc_MOTIF_EVENT_this_asb_snp;
+				}elsif( ($fc < 1) && $this_event_type eq 'MOTIFG' ){
+					push(@rd_fc_MOTIF_EVENT, $values);
+					$fc_MOTIF_EVENT_this_asb_snp = join(",",@rd_fc_MOTIF_EVENT);
+					$motifmodel_motifpos2geomicpos2FC_MOTIFG{$hit_position}{$these_coords} = $fc_MOTIF_EVENT_this_asb_snp;					
+				}else{
+					print STDERR "process_motif_break_or_gain_string(): sample: $sample - $this_event_type info discordant with ph change. Skipping sample..";
+					next;
+				}
+			}else{
+				print STDERR "process_motif_break_or_gain_string(): sample: $sample - warning - fold change value $fc is empty or undefined. Skipping..\n";
+				next;
+			}
+		}
+	}
+	return;
+}
+
+
 #this splits a read_data string of the kind "c,a,,0,6,0,0"
 #into a phenotype disruption score FC = [ (alt_count + 1) / (anc_count + 1) ] (turned into logs in R)
 #I do alt/anc so that LOB points are negative on the graph, while GOB are positive
