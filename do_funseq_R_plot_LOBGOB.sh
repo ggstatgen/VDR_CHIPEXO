@@ -46,12 +46,13 @@ for FILE in ${PDATA}/*.Rdata;
 	#subset(data,!duplicated(data$ID))
 	echo "data_${TF}_${ID}_dedup <- subset(data_${TF}_${ID},!duplicated(data_${TF}_${ID}\$position))" >> ${PDATA}/${SCRIPT};
 	echo "data_${TF}_${ID}\$position <- factor(data_${TF}_${ID}\$position, levels=data_${TF}_${ID}_dedup\$position)" >> ${PDATA}/${SCRIPT};
-
-	echo "ggplot(data_${TF}_${ID}, aes(y=((ref+1)/(alt+1)), x=position))  + geom_jitter(size=5, alpha = I(.7), position = position_jitter(width = .2,height=0), aes(colour = type)) + theme_minimal() + ggtitle(\"Impact of LOB VDR-BVs on binding affinity at ${TF}(${ID}) consensus motif\") + ylab(\"rc(anc)+1/rc(alt)+1\") +  xlab(\"Position in Consensus Motif\") +  scale_y_continuous(limits = c(1, ${YSCALE})) +  scale_colour_manual(values=c(\"#3399FF\", \"orange\", \"#FF3300\",\"#999999\"))"  >> ${PDATA}/${SCRIPT};
+	
+	#if you want again the gray for the SYM, it's
+	echo "ggplot(data_${TF}_${ID}, aes(y=((ref+1)/(alt+1)), x=position))  + geom_jitter(size=5, alpha = I(.7), position = position_jitter(width = .2,height=0), aes(colour = type)) + theme_minimal() + ggtitle(\"Impact of LOB VDR-BVs on binding affinity at ${TF}(${ID}) consensus motif\") + ylab(\"rc(anc)+1/rc(alt)+1\") +  xlab(\"Position in Consensus Motif\") +  scale_y_continuous(limits = c(1, ${YSCALE})) +  scale_colour_manual(values=c(\"#3399FF\", \"orange\", \"#FF3300\", \"#0000ff\",\"#999999\"))"  >> ${PDATA}/${SCRIPT};
 	echo "ggsave(\"${PDATA}/data_LOB_${TF}_${ID}.svg\", width=15)" >> ${PDATA}/${SCRIPT};
 	echo "ggsave(\"${PDATA}/data_LOB_${TF}_${ID}.png\", width=15)" >> ${PDATA}/${SCRIPT};
 	
-	echo "ggplot(data_${TF}_${ID}, aes(y=((alt+1)/(ref+1)), x=position))  + geom_jitter(size=5, alpha = I(.7),position =  position_jitter(width = .2,height=0), aes(colour = type)) + theme_minimal() + ggtitle (\"Impact of GOB VDR-BVs on binding affinity at ${TF}(${ID}) consensus motif\") + ylab(\"rc(alt)+1/rc(anc)+1\") +  xlab(\"Position in Consensus Motif\") +  scale_y_continuous(limits = c(1, ${YSCALE})) +  scale_colour_manual(values=c(\"#3399FF\", \"orange\", \"#FF3300\",\"#999999\"))"  >> ${PDATA}/${SCRIPT}; 
+	echo "ggplot(data_${TF}_${ID}, aes(y=((alt+1)/(ref+1)), x=position))  + geom_jitter(size=5, alpha = I(.7),position =  position_jitter(width = .2,height=0), aes(colour = type)) + theme_minimal() + ggtitle (\"Impact of GOB VDR-BVs on binding affinity at ${TF}(${ID}) consensus motif\") + ylab(\"rc(alt)+1/rc(anc)+1\") +  xlab(\"Position in Consensus Motif\") +  scale_y_continuous(limits = c(1, ${YSCALE})) +  scale_colour_manual(values=c(\"#3399FF\", \"orange\", \"#FF3300\", \"#0000ff\",\"#999999\"))"  >> ${PDATA}/${SCRIPT}; 
 	echo "ggsave(\"${PDATA}/data_GOB_${TF}_${ID}.svg\", width=15)" >> ${PDATA}/${SCRIPT};
 	echo "ggsave(\"${PDATA}/data_GOB_${TF}_${ID}.png\", width=15)" >> ${PDATA}/${SCRIPT};
 	
