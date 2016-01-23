@@ -378,17 +378,16 @@ while(<$instream>){
 	}
 	#FILTER: ENHANCER
 	if($ENH_ONLY){ next unless($info_ncenc =~ /Enhancer/); }
-	my $hit_position;
 	
-	#MOTIFBR=NFYA#NFYA_MA0060.1#73020282#73020298#-#11#0.100#0.600,NR4A2#NR4A2_MA0160.1#73020285#73020293#-#6#0.000#0.900
 	if($info_motifbr){#===================================================================================================
 		process_motif_break_or_gain_string($info_motifbr, $rs_id, $genomic_coord, 'MOTIFBR');
-	}elsif($info_motifg){
+	}elsif($info_motifg){ 
 		process_motif_break_or_gain_string($info_motifg, $rs_id, $genomic_coord, 'MOTIFG');	
 	}else{ #no motifbr - get hit and coordinates manually =================================================================
 		my $motif_coordinates;
 		my $TF_motif_strand;
 		my $TF_snp_position;
+		my $hit_position;
 		
 		my ($ncenc,$ncenc_data) = split("=", $info_ncenc);
 		my @ncenc_data = split(",", $ncenc_data);
@@ -539,22 +538,44 @@ close $outstream;
 
 #subroutine===============================================================================
 
-#since I do the same for MOTIFBR and MOTIFG I will put the stuff here
+#MOTIFBR and MOTIFG have different structure. From the docs:
+
+#MOTIFBR (motif-breaking analysis)
+#      SNV Example: ‘MOTIFBR=MAX#Myc_known9_8mer#102248644#102248656#-#9#0.068966#0.931034’
+#      The variant causes a motif-breaking event. This field is a hash tag delimited, defined as follows: TF name # motif name # motif start # 
+#      motif end # motif strand # mutation position # alternative allele frequency in PWM # reference allele frequency in PWM. (0-based, end exclusive)     
+#MOTIFG (motif-gaining analysis)
+#      SNV Example: ‘MOTIFG=GATA_known5#75658824#75658829#-#1#4.839#4.181’
+#      The variant causes a motif-gaining event. Hash tag delimited: motif name # motif start # motif end # motif strand # mutation position 
+#      # sequence score with alternative allele # sequence score with reference allele. (0-based, end exclusive)
+
+
+#eg
+
+#MOTIFBR=NFYA#NFYA_MA0060.1#73020282#73020298#-#11#0.100#0.600,NR4A2#NR4A2_MA0160.1#73020285#73020293#-#6#0.000#0.900
+#MOTIFG=MAFG::NFE2L1_MA0089.1#123578334#123578340#+#3#6.380#1.985
 sub process_motif_break_or_gain_string{
 	my ($this_string, $this_rsid, $these_coords, $this_event_type) = @_;
 	my $hit_position;
+	my $TF; my $TF_motif; my $TF_motif_start; my $TF_motif_end; my $TF_motif_strand; my $TF_snp_position; my $TF_alt_score; my $TF_ref_score;
 
 	my ($motif_change_type,$motif_change_byTF) = split("=", $this_string);
 	my @motif_change_byTF = split(",", $motif_change_byTF);
-	
+
 	foreach my $item (@motif_change_byTF){
-		my ($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);
+		if($this_event_type eq 'MOTIFBR'){
+			($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);
+		}elsif($this_event_type eq 'MOTIFG'){
+			($TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);
+		}else{
+			print STDERR "process_motif_break_or_gain_string(): Unrecognised event type: $this_event_type. Aborting..\n";
+			exit -1;
+		}
 		next unless( $TF_motif eq $motif_name_id);
 		next if(!$TF_motif_strand);
 		next unless( ($TF_motif_strand eq '-') or ($TF_motif_strand eq '+') );
-		
 		if(!$position2sample2readdepth{$these_coords}){
-			print STDERR "$this_rsid - $these_coords: no ancestral/derived info available for this VDR-BV. Skipping..\n";
+			print STDERR "process_motif_break_or_gain_string() - $this_rsid - $these_coords: no ancestral/derived info available for this VDR-BV. Skipping..\n";
 			next;
 		}		
 		
@@ -576,7 +597,7 @@ sub process_motif_break_or_gain_string{
 					$fc_MOTIF_EVENT_this_asb_snp = join(",",@rd_fc_MOTIF_EVENT);
 					$motifmodel_motifpos2geomicpos2FC_MOTIFG{$hit_position}{$these_coords} = $fc_MOTIF_EVENT_this_asb_snp;					
 				}else{
-					print STDERR "process_motif_break_or_gain_string(): sample: $sample - $this_event_type info discordant with ph change. Skipping sample..";
+					print STDERR "process_motif_break_or_gain_string(): sample: $sample - $this_event_type info discordant with ph change. Skipping sample..\n";
 					next;
 				}
 			}else{
