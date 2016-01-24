@@ -46,9 +46,13 @@ unless($input_list && $input_gencode){
 	exit 1;
 }
 my($basename, $directory) = fileparse($input_list);
+my($gen_basename, $gen_directory) = fileparse($input_gencode);
 $basename =~ s/(.*)\..*/$1/;
+$gen_basename =~ s/(.*)\..*/$1/;
 my $output_fg = $directory . $basename . '_fg_hg19.bed';
 my $output_bg = $directory . $basename . '_bg_hg19.bed';
+my $output_not_found = $directory. $basename . '_unmapped_to_' . $gen_basename . '.txt';
+
 
 #create background file
 #input:
@@ -64,8 +68,9 @@ my $output_bg = $directory . $basename . '_bg_hg19.bed';
 #gene_id "ENSG00000186092.4"; transcript_id "ENSG00000186092.4"; gene_type "protein_coding"; gene_status "KNOWN"; gene_name "OR4F5"; transcript_type "protein_coding"; transcript_status "KNOWN"; transcript_name "OR4F5"; level 2; havana_gene "OTTHUMG00000001094.1";
 
 my %fgdata;
-open (my $inputstream,  q{<}, $input_list) or die("Unable to open $input_list : $!");
-while(<$inputstream>){
+open (my $instream,  q{<}, $input_list) or die("Unable to open $input_list : $!");
+open (my $outstream,  q{>}, $output_not_found) or die("Unable to open $output_not_found : $!");
+while(<$instream>){
 	chomp $_;
 	my $ens_id = $_;
 	my $grep_search = "zcat $input_gencode | grep \"$ens_id\"";
@@ -73,6 +78,7 @@ while(<$inputstream>){
 	
     if(!$line || $line eq '' ){
     	print STDERR "Warning: grepping $ens_id against the GENCODE data found nothing. Skipping this.\n";
+	print $outstream $ens_id, "\n";
     	next;
     }
     my @lines = split("\n", $line);
@@ -88,20 +94,21 @@ while(<$inputstream>){
 	}
 	next unless($fields[3]);
 	next unless($fields[4]);
-	unless($fields[8] =~ /protein_coding/){
-		print STDERR "Warning: this line does not contain a protein coding gene: $lines[0]. Skipping..\n";
-		next;
-	}  
+	#unless($fields[8] =~ /protein_coding/){
+	#	print STDERR "Warning: this line does not contain a protein coding gene: $lines[0]. Skipping..\n";
+	#	next;
+	#}  
 	my @inner_fields = split(';', $fields[8]);
-	my $bed_name = $ens_id . '; ' . $inner_fields[4];
+	my $bed_name = $ens_id . ';' . $inner_fields[4];
 	#ADJUST COORDS 
 	my $bed_line = $fields[0] . "\t" . $fields[3] . "\t" . $fields[4] . "\t" . $bed_name; 
   	$fgdata{$bed_line} = 1;
 }
-close $inputstream;
+close $instream;
+close $outstream;
 
 #print foreground
-open (my $outstream,  q{<}, $output_fg) or die("Unable to open $output_fg : $!");
+open ($outstream,  q{>}, $output_fg) or die("Unable to open $output_fg : $!");
 foreach my $item (keys %fgdata){ print $outstream $item, "\n"; }
 close $outstream;
 
@@ -121,10 +128,10 @@ while (<FILE>){
 	}
 	next unless($fields[3]);
 	next unless($fields[4]);
-	unless($fields[8] =~ /protein_coding/){
-		print STDERR "Warning: this line does not contain a protein coding gene: $_. Skipping..\n";
-		next;
-	}	
+	#unless($fields[8] =~ /protein_coding/){
+#		print STDERR "Warning: this line does not contain a protein coding gene: $_. Skipping..\n";
+#		next;
+#	}	
 	my @inner_fields = split(';', $fields[8]);
 	my $bed_name = $inner_fields[0] . '; ' . $inner_fields[4];
 	my $bed_line = $fields[0] . "\t" . $fields[3] . "\t" . $fields[4] . "\t" . $bed_name; 
@@ -133,7 +140,7 @@ while (<FILE>){
 close FILE;
 
 #print background
-open ($outstream,  q{<}, $output_bg) or die("Unable to open $output_bg : $!");
+open ($outstream,  q{>}, $output_bg) or die("Unable to open $output_bg : $!");
 foreach my $item (keys %bgdata){ print $outstream $item, "\n"; }
 close $outstream;
 
