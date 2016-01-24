@@ -39,7 +39,7 @@ GetOptions(
 		'g=s'      =>\$input_gencode,
 		'l=s'      =>\$lifted_over_in
 ); 
-my $USAGE = "USAGE: do_REVIEW_get_fg_bg_genes_from_gencode.pl -i=<INFILE_LIST> -g=<GENCODE_PC_GENES> (opt)-l=<LIFTED_OVER_BED>\n" .
+my $USAGE = "\nUSAGE: do_REVIEW_get_fg_bg_genes_from_gencode.pl -i=<INFILE_LIST> -g=<GENCODE_PC_GENES> (opt)-l=<LIFTED_OVER_BED>\n" .
 			"<INFILE_LIST> list of foreground ENSID to convert extracted from VITD Chipseq supplementary\n" .
 			"<GENCODE_PC_GENES> gtf gz file with GENCODE v19 entries of the type 'gene' and 'protein_coding'\n" . 
 			"(optional)<LIFTED_OVER_BED> hg19 bed file lifted over from the hg18 bed - used to get coords if ENS ID not found in gencode.\n";
@@ -76,7 +76,8 @@ if($lifted_over_in){
 	while(<$instream>){
 		chomp;
 		my @fields = split("\t", $_);
-		my ($gene_name, $ens_id) = split("-", $fields[3]);
+		print $fields[3], "\n";
+		my ($gene_name, $ens_id) = split("|", $fields[3]);
 		$lifted_over_map{$ens_id}{CHR} = $fields[0];
 		$lifted_over_map{$ens_id}{START}= $fields[1];
 		$lifted_over_map{$ens_id}{STOP}= $fields[2];
@@ -113,7 +114,7 @@ while(<$instream>){
     			next;
     		}
     	}else{
-    		print STDERR "Saving $ens_id in $output_not_found\n";
+    		print STDERR "saving this in dump file\n";
     		print $outstream $ens_id, "\n";
     		next;
     	}
@@ -135,7 +136,7 @@ while(<$instream>){
 	my @inner_fields = split(';', $fields[8]);
 	my $bed_name = $ens_id . ';' . $inner_fields[4];
 	#ADJUST COORDS 
-	my $bed_line = $fields[0] . "\t" . $fields[3] . "\t" . $fields[4] . "\t" . $bed_name; 
+	my $bed_line = $fields[0] . "\t" . ($fields[3] - 1) . "\t" . $fields[4] . "\t" . $bed_name; 
   	$fgdata{$bed_line} = 1;
 }
 close $instream;
@@ -165,7 +166,7 @@ while (<FILE>){
 
 	my @inner_fields = split(';', $fields[8]);
 	my $bed_name = $inner_fields[0] . '; ' . $inner_fields[4];
-	my $bed_line = $fields[0] . "\t" . $fields[3] . "\t" . $fields[4] . "\t" . $bed_name; 
+	my $bed_line = $fields[0] . "\t" . ($fields[3] - 1) . "\t" . $fields[4] . "\t" . $bed_name; 
   	$bgdata{$bed_line} = 1;
 }
 close FILE;
