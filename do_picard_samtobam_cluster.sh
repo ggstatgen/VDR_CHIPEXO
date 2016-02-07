@@ -48,10 +48,10 @@ TMP="/tmp";
 #-------------------
 # !!! CHANGE HERE depending on dataset
 #
-RGID="FOXN1" #append to this dynamically from input file 
+RGID="MATTEA_CHIPEXO" #append to this dynamically from input file 
 RGPL="ILLUMINA";  #gatk wants only one of ILLUMINA,SLX,SOLEXA,SOLID,454,COMPLETE,PACBIO,IONTORRENT,CAPILLARY,HELICOS,UNKNOWN
-RGLB="XO111";
-RGPU="BOWTIE_mm10";  #really don't know what to put in this one
+RGLB="-";
+RGPU="BWA_mm10";  #really don't know what to put in this one
 #RGSM=""; #Giulio set this to "Andrew" and "Jean", I cannot get these from the file names, will use some variant of RGID taken from the file name
 #
 # !!! CHANGE HERE IF NEEDED

@@ -40,15 +40,16 @@ fi
 
 PDATA=$1;
 PCODE="/net/isi-scratch/giuseppe/tools";
-PCHROMSIZE="/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom.sizes";
-#PCHROMSIZE="/net/isi-scratch/giuseppe/indexes/chrominfo/mm9.chrom.sizes";
+#PCHROMSIZE="/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom.sizes";
+PCHROMSIZE="/net/isi-scratch/giuseppe/indexes/chrominfo/mm10.chrom.sizes";
 #PCHROMSIZE="/net/isi-scratch/giuseppe/indexes/Hsap/g1k_v37/g1k_v37_chrom.sizes"; #for the 1000g reference
-PGENOME="/net/isi-scratch/giuseppe/indexes/Hsap/chromosomes_hg19"; #fasta files by chromosome
+#PGENOME="/net/isi-scratch/giuseppe/indexes/Hsap/chromosomes_hg19"; #fasta files by chromosome
 #PGENOME="/net/isi-scratch/giuseppe/indexes/Hsap/g1k_v37/by_chr"
 #PGENOME="/net/isi-scratch/giuseppe/indexes/Mmus/mm9";
+PGENOME="/net/isi-mirror/ucsc/mm10/chromosomes/chrs";
 #PGENOME="/net/isi-scratch/giuseppe/indexes/Hsap/g1k_v37/by_chr"; #for the 1000g reference
-MAPPABILITY="2540757438"; #hsap 19
-#MAPPABILITY="1870000000"; #mmus 9 (from macs)
+#MAPPABILITY="2540757438"; #hsap 19
+MAPPABILITY="1870000000"; #mmus
 
 
 for FILE in ${PDATA}/*.bam;
@@ -70,15 +71,12 @@ for FILE in ${PDATA}/*.bam;
               --s ${MAPPABILITY} \\
               --expt ${FILE} \\
               --f SAM \\
-              --smooth 3 \\
-              --mrc 20 \\
               --outBED \\
-              --sl \\
-              --out ${PDATA}/GEM_${ID} \\
+              --out ${PDATA}/GEM_mouse \\
               --genome ${PGENOME} \\
               --k_min $2 \\
               --k_max $3" >>${PDATA}/${SCRIPT};
-        nice -5 qsub -e ${PDATA}/GEM_${ID}.err -o ${PDATA}/GEM_${ID}.out -q fgu217.q ${PDATA}/${SCRIPT};
-        #nice  -5 qsub -e ${PDATA}/gem_${ID}.err -o ${PDATA}/gem_${ID}.out -q newnodes.q ${PDATA}/${SCRIPT};
+        #nice -5 qsub -e ${PDATA}/GEM_${ID}.err -o ${PDATA}/GEM_${ID}.out -q fgu217.q ${PDATA}/${SCRIPT};
+        nice  -5 qsub -e ${PDATA}/gem_${ID}.err -o ${PDATA}/gem_${ID}.out -q newnodes.q ${PDATA}/${SCRIPT};
         rm ${PDATA}/${SCRIPT};  
 done

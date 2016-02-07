@@ -40,9 +40,12 @@ for FILE in ${PDATA}/*.bam;
 	echo "source activate" >> ${PDATA}/${SCRIPT};
 
 	#change required options here:
+	echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_${ID}_d${EXT_SIZE}_dups_${DUPS}_q_${QVAL} -g mm --keep-dup=${DUPS} --nomodel --extsize ${EXT_SIZE} -q 0.01" >>${PDATA}/${SCRIPT};
+	#echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_${ID}_d${EXT_SIZE}_dups_${DUPS}_q_${QVAL} -g mm" >>${PDATA}/${SCRIPT};
+
 	#echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_${ID} -g 2540757438 --keep-dup=auto" >>${PDATA}/${SCRIPT};
 
-        echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_d${EXT_SIZE}_dup${DUPS}_q${QVAL}_${ID} -g 2540757438 --keep-dup=${DUPS} -q ${QVAL}  -B --SPMR  --nomodel --extsize ${EXT_SIZE}" >>${PDATA}/${SCRIPT};
+        #echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_d${EXT_SIZE}_dup${DUPS}_q${QVAL}_${ID} -g 2540757438 --keep-dup=${DUPS} -q ${QVAL}  -B --SPMR  --nomodel --extsize ${EXT_SIZE}" >>${PDATA}/${SCRIPT};
 	#echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/MACS2_${ID} -g 2540757438 -B --SPMR --keep-dup=all -q 0.01 --nomodel --extsize 13" >>${PDATA}/${SCRIPT};
         #echo "${PCODE}/macs2 callpeak -t ${FILE} -n ${PDATA}/${ID} -g 2540757438 -B --trackline --SPMR --keep-dup=all -s 40 -p 1e-5 --nomodel --extsize 26" >>${PDATA}/${SCRIPT};
         

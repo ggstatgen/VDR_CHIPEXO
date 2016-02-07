@@ -18,7 +18,8 @@ fi
 
 PDATA=$1;
 PBED=$2;
-PCODE="/net/isi-scratch/giuseppe/tools/bedtools2-2.20.1/bin/bedtools";
+#PCODE="/net/isi-scratch/giuseppe/tools/bedtools2-2.20.1/bin/bedtools";
+PCODE="/net/isi-scratch/giuseppe/tools/bedtools-2.22.1/bin/bedtools";
 PID=$3;
 
 for FILE in ${PDATA}/*.bam;
@@ -28,10 +29,12 @@ for FILE in ${PDATA}/*.bam;
 
         echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
         echo '' >>${PDATA}/${SCRIPT};
+	echo 'source activate' >> ${PDATA}/${SCRIPT};
+	echo '' >>${PDATA}/${SCRIPT};
 	
 	#echo "source activate" >> ${PDATA}/${SCRIPT};
 	echo "${PCODE} intersect -abam ${FILE} -b ${PBED} -v > ${PDATA}/${ID}_RBL.bam" >> ${PDATA}/${SCRIPT};
 
-        nice -5 qsub -e ${PDATA}/sub_bed_f_bam_${PID}_${ID}.err -o ${PDATA}/sub_bed_f_bam_${PID}_${ID}.out -q fgu217.q ${PDATA}/${SCRIPT};
+        nice -5 qsub -e ${PDATA}/sub_bed_f_bam_${PID}_${ID}.err -o ${PDATA}/sub_bed_f_bam_${PID}_${ID}.out -q newnodes.q ${PDATA}/${SCRIPT};
         rm ${PDATA}/${SCRIPT};  
 done

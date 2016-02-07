@@ -18,7 +18,8 @@
 
 
 PCODE="/net/isi-scratch/giuseppe/tools";
-PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/hg19.fa";
+#PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/hg19.fa";
+PINDEX="/net/isi-mirror/ucsc/mm10/chromosomes/mm10.fa";
 PBWA="/home/giuseppe/local/bin" #this refers to a symbolic link to the latest bwa. If you don't use this, it will try to use the cgat bwa
 #PINDEX="/net/isi-scratch/giuseppe/indexes/bwa/mm9.fa";
 #qui ci vuole il mmus 9, crea un argomento linea di comando
@@ -52,14 +53,13 @@ for FILE in ${PDATA}/*.fastq.gz;
         echo "${PBWA}/bwa aln -q10 -t10 -f ${PDATA}/${BASEFILE}_2.sai ${PINDEX} ${PDATA}/${BASEFILE}_2_.fastq.gz" >>${PDATA}/${SCRIPT};
         echo "${PBWA}/bwa sampe ${PINDEX} ${PDATA}/${BASEFILE}_1.sai   ${PDATA}/${BASEFILE}_2.sai ${PDATA}/${BASEFILE}_1_.fastq.gz ${PDATA}/${BASEFILE}_2_.fastq.gz -f ${PDATA}/${BASEFILE}.sam" >>${PDATA}/${SCRIPT};
         echo '' >>${PDATA}/${SCRIPT};
-	echo "${PBWA}/samtools/samtools view -bS ${PDATA}/${BASEFILE}.sam > ${PDATA}/${BASEFILE}.bam" >>${PDATA}/${SCRIPT};
-        
+	echo "${PBWA}/samtools view -bS ${PDATA}/${BASEFILE}.sam > ${PDATA}/${BASEFILE}.bam" >>${PDATA}/${SCRIPT};
         #the stampy doc says stampy won't need sorted bams from bwa
         #comment this again
-        #echo "${PCODE}/samtools/samtools sort ${PDATA}${ID}.bam ${PDATA}${ID}.sorted" >>${PDATA}/${SCRIPT};
-        #echo "${PCODE}/samtools/samtools index ${PDATA}${ID}.sorted.bam" >>${PDATA}/${SCRIPT};
+        echo "${PBWA}/samtools sort ${PDATA}${ID}.bam ${PDATA}${ID}.sorted" >>${PDATA}/${SCRIPT};
+        echo "${PBWA}/samtools index ${PDATA}${ID}.sorted.bam" >>${PDATA}/${SCRIPT};
 
 	nice -5 qsub -e ${PDATA}/${BASEFILE}.err -o ${PDATA}/${BASEFILE}.out -q newnodes.q ${PDATA}/${SCRIPT};
-        #rm ${PDATA}/${SCRIPT}; 
+        rm ${PDATA}/${SCRIPT}; 
 	#find . -empty -type f -print0 | xargs -0 echo rm;
 done

@@ -39,7 +39,10 @@ MAXSHIFT=$4;
 SMOOTH=$5;
 PCODE="/net/isi-scratch/giuseppe/tools/MASC/MaSC.pl";
 #PMAPPABILITY="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/MAPPABILITY/MASC/"
-PCHROMINFO="/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom.sizes"
+#PCHROMINFO="/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom.sizes"
+PCHROMINFO="/net/isi-scratch/giuseppe/indexes/chrominfo/mm10.chrom.sizes"
+mm10.chrom.sizes
+
 
 for FILE in ${PDATA}/*.bed;
 	do ID=`basename ${FILE} ".bed"`;

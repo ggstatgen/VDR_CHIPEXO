@@ -42,7 +42,7 @@ if [ ! $# == 1 ]; then
 fi
 
 PDATA=$1;
-PCODE="/net/isi-scratch/giuseppe/tools/bedtools2-2.19.0/bin";
+PCODE="/net/isi-scratch/giuseppe/tools/bedtools-2.22.1/bin/";
 
 for FILE in ${PDATA}/*.bam;
         do ID=`basename ${FILE} ".bam"`;

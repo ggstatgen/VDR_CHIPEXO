@@ -74,7 +74,7 @@ for FILE in ${PDATA}/*.bed;
               --counter=segment-overlap      \\
               --annotations=${PANNOTATION}   \\
               --workspace=${PWSP}            \\
-	      --isochore-file=${PISOCHORE}   \\
+ --isochore-file=${PISOCHORE}   \\
               --output-counts-pattern=${POUT}/${ID}.%s.oc.tsv.gz \\
               --num-samples=${PRAND}         \\
               --log=${POUT}/GAT_${DESC}_vs_${ID}.log" >> ${PDATA}/${SCRIPT};

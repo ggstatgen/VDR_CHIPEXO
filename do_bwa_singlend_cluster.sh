@@ -9,8 +9,8 @@
 
 
 PCODE="/net/isi-scratch/giuseppe/tools";
-#PINDEX="/net/isi-scratch/giuseppe/indexes/Mmus/mm10/mm10.fa";
-PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/hg19.fa";
+PINDEX="/net/isi-mirror/ucsc/mm10/chromosomes/mm10.fa";
+#PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/hg19.fa";
 #PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19_masked/hg19_masked.fa";
 #PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/hg19_nosex/hg19_nosex";
 #PINDEX="/net/isi-scratch/giuseppe/indexes/Hsap/g1k_v37/human_g1k_v37.fasta"
@@ -40,7 +40,7 @@ QUEUE=$4;
 # !!! CHANGE HERE depending on dataset
 #
 RGPL="ILLUMINA";  #platform: gatk wants only one of ILLUMINA,SLX,SOLEXA,SOLID,454,COMPLETE,PACBIO,IONTORRENT,CAPILLARY,HELICOS,UNKNOWN
-RGLB="FOXN1"; #library 
+RGLB="MATTEA_CHIPEXO"; #library 
 RGPU=${LANE};  #platform unit (lane info) 
 RGPG="BWA"; #Programs used for processing the read group.
 RGCN="Peconic";
@@ -48,11 +48,11 @@ RGCN="Peconic";
 # !!! CHANGE HERE AS NEEDED
 #
 
-for FILE in ${PDATA}/*.fastq;
+for FILE in ${PDATA}/*.fastq.gz;
 	do 
-        BASEFILE=`basename ${FILE} ".fastq"`; 
+        BASEFILE=`basename ${FILE} ".fastq.gz"`; 
         #FILE_ID=`echo ${FILE} | egrep -o "GM[0-9]*"`;
-	FILE_ID=`basename ${FILE} ".fastq"`;
+	FILE_ID=`basename ${FILE} ".fastq.gz"`;
 
 	#sample dependent variables
 	SCRIPT=bwa_se_${FILE_ID}.sh;
@@ -69,7 +69,7 @@ for FILE in ${PDATA}/*.fastq;
         echo '' >>${POUT}/${SCRIPT};
 	echo "${PSAMTOOLS}/samtools view -bS ${POUT}/${BASEFILE}.sam > ${POUT}/${BASEFILE}.bam" >>${POUT}/${SCRIPT};
         
-       	nice -5 qsub -e ${POUT}/bwa_se_${BASEFILE}.err -o ${POUT}/bwa_se_${BASEFILE}.out -q ${QUEUE}.q ${POUT}/${SCRIPT};
-        rm ${POUT}/${SCRIPT}; 
+       	#nice -5 qsub -e ${POUT}/bwa_se_${BASEFILE}.err -o ${POUT}/bwa_se_${BASEFILE}.out -q ${QUEUE}.q ${POUT}/${SCRIPT};
+        #rm ${POUT}/${SCRIPT}; 
 	#find . -empty -type f -print0 | xargs -0 echo rm;
 done

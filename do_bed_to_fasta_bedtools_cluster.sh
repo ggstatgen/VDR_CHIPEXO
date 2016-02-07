@@ -38,8 +38,9 @@ fi
 PDATA=$1;
 PEXT=$2;
 #location of macs2 executable, change if needed
-PBEDTOOLS="/net/isi-scratch/giuseppe/tools/bedtools2-2.20.1/bin";
-PFASTA="/net/isi-scratch/giuseppe/indexes/Hsap/hg19_masked/hg19_masked.fa";
+PBEDTOOLS="/net/isi-scratch/giuseppe/tools/bedtools-2.22.1/bin/";
+#PFASTA="/net/isi-scratch/giuseppe/indexes/Hsap/hg19_masked/hg19_masked.fa";
+PFASTA="/net/isi-mirror/ucsc/mm10/mm10.fa";
 #PFASTA="/net/isi-scratch/giuseppe/indexes/Hsap/hg19/hg19.fa";
 #PFASTA="/net/isi-scratch/giuseppe/indexes/Mmus/mm10/mm10.fa";
 #PFASTA="/net/isi-scratch/giuseppe/indexes/Mmus/mm10_masked/mm10_masked.fa";
