@@ -62,7 +62,8 @@ $basename =~ s/(.*)\..*/$1/;
 my $temp_pwm_bed        = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
 my $temp_pwm_bed_sorted = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
 my $data_closest        = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
-my $data_histogram      = $directory . $basename . '_' . $this_motif_id  . '_histogram.data';
+my $data_counts         = $directory . $basename . '_' . $this_motif_id  . '_counts.Rdata';
+my $data_histogram      = $directory . $basename . '_' . $this_motif_id  . '_histogram.Rdata';
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -132,27 +133,52 @@ close $outstream;
 system "cat $temp_pwm_bed | sort -k1,1V -k2,2n | uniq > $temp_pwm_bed_sorted";
 #get closeness data
 system "$BEDTOOLS closest -D \"ref\" -a $input_vdr_bv -b $temp_pwm_bed_sorted -g $CHROMSIZES > $data_closest";
-#unlink temp beds
+#from here I want two files
+#one, pure counts, to build histograms in R
+#two, x,y pairs, to build point plots in R
+
+#get pure counts
+system "cat $data_closest  | cut -f 7 > $data_counts";
+#get x,y pairs, where x=distance and y=count at that distance
+system "cat $data_closest  | cut -f 7 | sort -k1,1n | uniq -c | sed \'s/^ *//g;s/ /\t/\'  > $data_histogram";
+
 unlink $temp_pwm_bed;
 unlink $temp_pwm_bed_sorted;
-#get histogram
-system "cat $data_closest  | cut -f 7 | sort -k1,1n | uniq -c > $data_histogram";
 unlink $data_closest;
 
-#uniq -c has problems splitting the vars
-exit;
+#line plot
+#dataline <- read.table("$data_histogram",sep="\t")
+#subdataline <- subset(dataline, V2 >= -500 & V2 <= 500, select=c(V1,V2))
+#pdf(file="lineplot_sub_log.pdf")
+#plot(newdataline$V2,newdataline$V1, type="p", cex=.5)
+#plot(newdataline$V2,newdataline$V1, type="o", pch=10, cex=.2)
+#dev.off()
 
-bin_variants($data_histogram, \%variant_binning);
+#histogram
+#hist<- read.table("$data_histogram")
+#subhist <- subset(hist, V1 >= -1000 & V1 <= 1000  )
+#pdf(file="hist.pdf")
+#hist(data$V1,500)
+#dev.off()
+
+
+
+#bin_variants($data_histogram, \%variant_binning);
+#print "BIN\tCOUNT\n";
+#foreach my $bin (sort {$a<=>$b} keys %variant_binning){
+#	print $bin, "\t", $variant_binning{$bin}, "\n";
+#}
+
+#R processing, including thresholding
+
+
+
 
 
 
 ############### binning ############
 sub bin_variants{
 	my ($file, $hash) = @_;
-
-	my $skipped = 0;
-	my $valid = 0;
-	my $total = 0;
 	my %local_hash; #for the background the vcf is not unique, so fill hash. Do it also for the foreground, it won't hurt
 
 # output from uniq -c
@@ -166,27 +192,23 @@ sub bin_variants{
 	open (my $instream,  q{<}, $file) or die("Unable to open $file : $!");
 	while (<$instream>)	{
 		chomp;
-		my ($number, $distance) = (split / /)[7,8];
+		my ($number, $distance) = (split /\t/)[0,1];
 		$distance =~ s/-(\d+)/$1/;
 		push(@distances_seen, $distance);
 	}
 	close $instream;
 	my $max = max @distances_seen;
+	#print "Max distance in absolute value: $max\n";
 	
 	open ($instream,  q{<}, $file) or die("Unable to open $file : $!");
 	while (<$instream>)	{
 		chomp;
-		my ($number, $distance) = (split / /)[7,8];
+		my ($number, $distance) = (split /\t/)[0,1];
 		my $frac_distance = $distance / $max;
 		my $bin_id = int( $frac_distance * $BIN_NUMBER )/ $BIN_NUMBER;
 		$$hash{$bin_id} += $number;
 	}	
 	close $instream;	
-
-	#my $bin_id = int($distance * $BIN_NUMBER) /$BIN_NUMBER;
-	#$$hash{$bin_id} += $number;
-	#my $bin_id = int( $variants_1kg{$item}{$AFGLOB} * $BIN_NUMBER ) / $BIN_NUMBER;
-
 	return 1;
 }
 			
