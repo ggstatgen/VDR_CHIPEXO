@@ -137,7 +137,10 @@ unlink $temp_pwm_bed;
 unlink $temp_pwm_bed_sorted;
 #get histogram
 system "cat $data_closest  | cut -f 7 | sort -k1,1n | uniq -c > $data_histogram";
+unlink $data_closest;
 
+#uniq -c has problems splitting the vars
+exit;
 
 bin_variants($data_histogram, \%variant_binning);
 
