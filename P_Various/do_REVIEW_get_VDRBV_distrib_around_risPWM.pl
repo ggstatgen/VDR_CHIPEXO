@@ -41,7 +41,7 @@ my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg
 			"<PLOT> type of R output plot desired\n" .
 			"optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)\n"; 
 			
-unless($input_pscanchip_ris && $INPUT_VAR_BINARY && $identifier && $motif_name && $THRS_DIST && $PLOT_EXT){
+unless($input_pscanchip_ris && $INPUT_VAR_BINARY && $THRS_DIST && $PLOT_EXT){
 	print $USAGE;
 	exit -1;
 }
@@ -177,7 +177,7 @@ print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance fr
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id\")" . "\n";
+print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
@@ -190,7 +190,7 @@ print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\"
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_sub\")" . "\n";
-print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id\")" . "\n";
+print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
