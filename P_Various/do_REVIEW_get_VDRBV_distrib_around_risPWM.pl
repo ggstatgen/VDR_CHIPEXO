@@ -9,11 +9,6 @@ use Getopt::Long;
 #I can use bedtools closest to assign every variant to its closest VDR:RXR motif and then spit the R file
 #The problems with the interval in the ris are solved similarly to what I did in 'do_funseq_adapt_motiffile.pl'
 
-#use the following
-#bedtools closest -d -a Output_noDBRECUR.bed -b /net/isi-scratch/giuseppe/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_all_motifintervals.bed > closest.bed
-#bedtools closest -D "ref" if you want it symmetrical
-
-
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 
@@ -33,24 +28,15 @@ my $MIN_SCORE;
 
 GetOptions(
         'm=s'		=>\$input_pscanchip_ris,        
-	'v=s'		=>\$INPUT_VAR_BINARY,	
-        'n=s'		=>\$motif_name,		
-        'id=s'		=>\$identifier,
+		'v=s'		=>\$INPUT_VAR_BINARY,
         't=i'		=>\$THRS_DIST,   
         'p=s'		=>\$PLOT_EXT,
         's=f'		=>\$MIN_SCORE            
 );
-#$input_pscanchip_ris = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/RIS_LINKS/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
-#$motif_name = "RXRA-VDR";
-#$identifier = "MA0074.1";
-#$MIN_SCORE = '0.8';
-#$THRS_DIST = 100;
 
-my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -n=<MOTIF_NAME> -id=<ID> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>\n" .
+my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>\n" .
 			"<INFILE_PSCANCHIP> ris file from PscanChip\n" .
 			"<BV|rBV> if BV, all VDRBV will be used; if rBV, only VDR-rBV will be used\n" .
-			"<MOTIF_NAME> string to use for the Motif PWM name in the output file\n" .			 
-			"<ID> string to use for the ID (e.g. Jaspar ID) of the PWM in the output file\n" . 
 			"<THRS> Distance threshold cutoff for plot\n" .
 			"<PLOT> type of R output plot desired\n" .
 			"optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)\n"; 
@@ -73,12 +59,21 @@ unless($PLOT_EXT eq 'jpg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_E
 	exit -1;
 }
 print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
-my $this_motif_id = $motif_name . '_' . $identifier;
 
 $INPUT_VAR_BINARY = 'VDR-' . $INPUT_VAR_BINARY;
 my($basename, $directory) = fileparse($input_pscanchip_ris);
 $basename =~ s/(.*)\..*/$1/;
+#get motif name and id from the filename
+#eg Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites
+if($basename =~ /BVs_(.*)_(.*)_sites/){
+	$motif_name = $1;
+	$identifier = $2;
+}else{
+	print STDERR "ERROR: Unable to recognise the input motif file name: $basename. Aborting.\n";
+	exit -1;
+}
 
+my $this_motif_id = $motif_name . '_' . $identifier;
 my $temp_pwm_bed            = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
 my $temp_pwm_bed_sorted     = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
 my $data_closest            = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
