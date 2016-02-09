@@ -22,6 +22,8 @@ my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes'; 
 
+my $PLOT_EXT = 'pdf';
+
 my $input_pscanchip_ris;
 my $input_vdr_bv;
 my $PWM_FILE;
@@ -74,11 +76,11 @@ my $data_counts             = $directory . 'R_' . $this_motif_id  . '_counts.Rda
 my $data_histogram          = $directory . 'R_' . $this_motif_id  . '_histogram.Rdata';
 
 my $Rscript_counts           = $directory . 'R_' . $this_motif_id  . '_counts.R';
-my $Rscript_counts_plot_all  = $directory . 'R_' . $this_motif_id  . '_counts_all.svg';
-my $Rscript_counts_plot_sub  = $directory . 'R_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.svg';
+my $Rscript_counts_plot_all  = $directory . 'R_' . $this_motif_id  . '_counts_all.' . $PLOT_EXT;
+my $Rscript_counts_plot_sub  = $directory . 'R_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.' . $PLOT_EXT;
 my $Rscript_hist             = $directory . 'R_' . $this_motif_id  . '_hist.R';
-my $Rscript_hist_plot_all    = $directory . 'R_' . $this_motif_id  . '_hist_all.svg';
-my $Rscript_hist_plot_sub    = $directory . 'R_' . $this_motif_id  . '_hist_dthrs_' . $THRS_DIST .  '.svg';
+my $Rscript_hist_plot_all    = $directory . 'R_' . $this_motif_id  . '_hist_all.' . $PLOT_EXT;
+my $Rscript_hist_plot_sub    = $directory . 'R_' . $this_motif_id  . '_hist_dthrs_' . $THRS_DIST .  '.' . $PLOT_EXT;
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -164,12 +166,12 @@ unlink $data_closest;
 #line plot
 open ($outstream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
 print $outstream "data <- read.table(\"$data_counts\",sep=\"\\t\")" . "\n";
-print $outstream "svg(file=\"$Rscript_counts_plot_all\")" . "\n";
-print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_all\")" . "\n";
+print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"VDR-BV profile around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
-print $outstream "svg(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
+print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"VDR-BV profile around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
@@ -178,12 +180,12 @@ system "$RSCRIPT $Rscript_counts";
 
 open ($outstream,  q{>}, $Rscript_hist) or die("Unable to open $Rscript_hist : $!");
 print $outstream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
-print $outstream "svg(file=\"$Rscript_hist_plot_all\")" . "\n";
-print $outstream "hist(data\$V1, 100 xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_all\")" . "\n";
+print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"VDR-BV distribution around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
-print $outstream "svg(file=\"$Rscript_hist_plot_sub\")" . "\n";
-print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_sub\")" . "\n";
+print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"VDR-BV distribution around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
@@ -192,23 +194,6 @@ system "$RSCRIPT $Rscript_hist";
 unlink $data_counts;
 unlink $data_histogram;
 
-
-#dataline <- read.table("$data_histogram",sep="\t")
-#subdataline <- subset(dataline, V2 >= -500 & V2 <= 500, select=c(V1,V2))
-#pdf(file="lineplot_sub_log.pdf")
-#plot(newdataline$V2,newdataline$V1, type="p", cex=.5)
-#plot(newdataline$V2,newdataline$V1, type="o", pch=10, cex=.2)
-#dev.off()
-
-#histogram
-#open ($instream,  q{>}, $Rscript_histogram) or die("Unable to open $Rscript_histogram : $!");
-#close $instream;
-
-#hist<- read.table("$data_histogram")
-#subhist <- subset(hist, V1 >= -1000 & V1 <= 1000  )
-#pdf(file="hist.pdf")
-#hist(data$V1,500)
-#dev.off()
 
 #bin_variants($data_histogram, \%variant_binning);
 #print "BIN\tCOUNT\n";
