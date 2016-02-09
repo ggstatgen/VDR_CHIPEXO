@@ -4,6 +4,8 @@ use warnings;
 use File::Basename;
 use Getopt::Long;
 use List::Util qw( min max );
+use Statistics::R;
+
 
 #07/2/2016
 #I want to build a histogram showing the distribution of variant in the VDR:RXR motif and around it.
@@ -15,7 +17,7 @@ use List::Util qw( min max );
 #bedtools closest -d -a Output_noDBRECUR.bed -b /net/isi-scratch/giuseppe/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_all_motifintervals.bed > closest.bed
 #bedtools closest -D "ref" if you want it symmetrical
 
-my $BIN_NUMBER = 1000;
+my $THRS_DIST = 100;
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes'; 
 
@@ -59,11 +61,16 @@ my $this_motif_id = $motif_name . '_' . $identifier;
 
 my($basename, $directory) = fileparse($input_pscanchip_ris);
 $basename =~ s/(.*)\..*/$1/;
-my $temp_pwm_bed        = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
-my $temp_pwm_bed_sorted = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
-my $data_closest        = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
-my $data_counts         = $directory . $basename . '_' . $this_motif_id  . '_counts.Rdata';
-my $data_histogram      = $directory . $basename . '_' . $this_motif_id  . '_histogram.Rdata';
+my $temp_pwm_bed            = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
+my $temp_pwm_bed_sorted     = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
+my $data_closest            = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
+my $data_counts             = $directory . $basename . '_' . $this_motif_id  . '_counts.Rdata';
+my $data_histogram          = $directory . $basename . '_' . $this_motif_id  . '_histogram.Rdata';
+my $Rscript_counts          = $directory . $basename . '_' . $this_motif_id  . '_counts.R';
+my $Rscript_counts_pdf_all  = $directory . $basename . '_' . $this_motif_id  . '_counts_all.pdf';
+my $Rscript_counts_pdf_sub  = $directory . $basename . '_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.pdf';
+my $Rscript_histogram       = $directory . $basename . '_' . $this_motif_id  . '_histogram.R';
+my $Rscript_histogram_pdf   = $directory . $basename . '_' . $this_motif_id  . '_histogram.pdf';
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -147,6 +154,20 @@ unlink $temp_pwm_bed_sorted;
 unlink $data_closest;
 
 #line plot
+open ($instream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
+print $instream "data <- read.table(\"$data_counts\",sep=\"\t\")" . "\n";
+print $instream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
+print $instream "pdf(file=\"$Rscript_counts_pdf_all\")" . "\n";
+print $instream "plot(data$V2,data$V1, type=\"p\", cex=.5)" . "\n";
+print $instream "dev.off()" . "\n";
+print $instream "pdf(file=\"$Rscript_counts_pdf_sub\")" . "\n";
+print $instream "plot(sub_data$V2,sub_data$V1, type=\"p\", cex=.5)" . "\n";
+print $instream "dev.off()" . "\n";
+close $instream;
+
+unlink $data_counts;
+unlink $data_histogram;
+
 #dataline <- read.table("$data_histogram",sep="\t")
 #subdataline <- subset(dataline, V2 >= -500 & V2 <= 500, select=c(V1,V2))
 #pdf(file="lineplot_sub_log.pdf")
@@ -155,13 +176,14 @@ unlink $data_closest;
 #dev.off()
 
 #histogram
+#open ($instream,  q{>}, $Rscript_histogram) or die("Unable to open $Rscript_histogram : $!");
+#close $instream;
+
 #hist<- read.table("$data_histogram")
 #subhist <- subset(hist, V1 >= -1000 & V1 <= 1000  )
 #pdf(file="hist.pdf")
 #hist(data$V1,500)
 #dev.off()
-
-
 
 #bin_variants($data_histogram, \%variant_binning);
 #print "BIN\tCOUNT\n";
@@ -170,9 +192,6 @@ unlink $data_closest;
 #}
 
 #R processing, including thresholding
-
-
-
 
 
 
