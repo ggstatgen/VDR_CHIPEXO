@@ -17,7 +17,7 @@ use Statistics::R;
 #bedtools closest -d -a Output_noDBRECUR.bed -b /net/isi-scratch/giuseppe/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_all_motifintervals.bed > closest.bed
 #bedtools closest -D "ref" if you want it symmetrical
 
-my $THRS_DIST = 100;
+my $THRS_DIST = 5000;
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes'; 
 
@@ -64,13 +64,13 @@ $basename =~ s/(.*)\..*/$1/;
 my $temp_pwm_bed            = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
 my $temp_pwm_bed_sorted     = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
 my $data_closest            = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
-my $data_counts             = $directory . $basename . '_' . $this_motif_id  . '_counts.Rdata';
-my $data_histogram          = $directory . $basename . '_' . $this_motif_id  . '_histogram.Rdata';
-my $Rscript_counts          = $directory . $basename . '_' . $this_motif_id  . '_counts.R';
-my $Rscript_counts_pdf_all  = $directory . $basename . '_' . $this_motif_id  . '_counts_all.pdf';
-my $Rscript_counts_pdf_sub  = $directory . $basename . '_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.pdf';
-my $Rscript_histogram       = $directory . $basename . '_' . $this_motif_id  . '_histogram.R';
-my $Rscript_histogram_pdf   = $directory . $basename . '_' . $this_motif_id  . '_histogram.pdf';
+my $data_counts             = $directory . 'R_' . $this_motif_id  . '_counts.Rdata';
+my $data_histogram          = $directory . 'R_' . $this_motif_id  . '_histogram.Rdata';
+my $Rscript_counts          = $directory . 'R_' . $this_motif_id  . '_counts.R';
+my $Rscript_counts_pdf_all  = $directory . 'R_' . $this_motif_id  . '_counts_all.pdf';
+my $Rscript_counts_pdf_sub  = $directory . 'R_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.pdf';
+my $Rscript_histogram       = $directory . 'R_' . $this_motif_id  . '_histogram.R';
+my $Rscript_histogram_pdf   = $directory . 'R_' . $this_motif_id  . '_histogram.pdf';
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -155,15 +155,17 @@ unlink $data_closest;
 
 #line plot
 open ($instream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
-print $instream "data <- read.table(\"$data_counts\",sep=\"\t\")" . "\n";
-print $instream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
+print $instream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
 print $instream "pdf(file=\"$Rscript_counts_pdf_all\")" . "\n";
-print $instream "plot(data$V2,data$V1, type=\"p\", cex=.5)" . "\n";
+print $instream "plot(data\$V2,data\$V1, type=\"p\", cex=.5)" . "\n";
 print $instream "dev.off()" . "\n";
+print $instream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $instream "pdf(file=\"$Rscript_counts_pdf_sub\")" . "\n";
-print $instream "plot(sub_data$V2,sub_data$V1, type=\"p\", cex=.5)" . "\n";
+print $instream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3)" . "\n";
 print $instream "dev.off()" . "\n";
 close $instream;
+
+system "RRscript $Rscript_counts";
 
 unlink $data_counts;
 unlink $data_histogram;
@@ -197,6 +199,7 @@ unlink $data_histogram;
 
 ############### binning ############
 sub bin_variants{
+	my $BIN_NUMBER; #temp
 	my ($file, $hash) = @_;
 	my %local_hash; #for the background the vcf is not unique, so fill hash. Do it also for the foreground, it won't hurt
 
