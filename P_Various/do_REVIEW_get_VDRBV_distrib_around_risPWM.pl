@@ -17,8 +17,9 @@ use Statistics::R;
 #bedtools closest -d -a Output_noDBRECUR.bed -b /net/isi-scratch/giuseppe/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_all_motifintervals.bed > closest.bed
 #bedtools closest -D "ref" if you want it symmetrical
 
-my $THRS_DIST = 5000;
+my $THRS_DIST;
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
+my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes'; 
 
 my $input_pscanchip_ris;
@@ -28,6 +29,7 @@ my $identifier;
 my $motif_name;
 my $MIN_SCORE;
 my %variant_binning;
+my $THRS_DIST;
 
 GetOptions(
         'i_m=s'      =>\$input_pscanchip_ris,        
@@ -35,7 +37,8 @@ GetOptions(
         'pwm=s'		=>\$PWM_FILE,	
         'id=s'		=>\$identifier,
         'm=s'		=>\$motif_name,
-        's=f'		=>\$MIN_SCORE        
+        's=f'		=>\$MIN_SCORE,
+        't=i'       =>\$THRS_DIST       
 );
 $input_vdr_bv = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed";
 $input_pscanchip_ris = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/RIS_LINKS/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
@@ -43,16 +46,19 @@ $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus
 $motif_name = "RXRA-VDR";
 $identifier = "MA0074.1";
 $MIN_SCORE = '0.8';
+$THRS_DIST = 100;
 
-my $USAGE = "\nUSAGE: $0 -i_m=<INFILE_PSCANCHIP> -i_v=<INFILE_VDRBV> -pwm=<ENCODE_PWM_FILE> -id=<ID> -m=<MOTIF_NAME> (opt)-s=<MINSCORE>\n" .
+
+my $USAGE = "\nUSAGE: $0 -i_m=<INFILE_PSCANCHIP> -i_v=<INFILE_VDRBV> -pwm=<ENCODE_PWM_FILE> -id=<ID> -m=<MOTIF_NAME> -t=<THRS> (opt)-s=<MINSCORE>\n" .
 			"<INFILE_PSCANCHIP> ris file from PscanChip\n" .
 			"<INFILE_VDRBV> bed file of VDR-BVs\n" . 
 			"<ENCODE_PWM_FILE> text file with Jaspar PWMs in ENCODE format obtained with RSAT\n" .
 			"<ID> string to use for the ID (e.g. Jaspar ID) of the PWM in the output file\n" . 
-			"<MOTIF_NAME> string to use for the Motif PWM name in the output file\n"	.
+			"<MOTIF_NAME> string to use for the Motif PWM name in the output file\n" .
+			"<THRS> Distance threshold cutoff for plot\n" .
 			"optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)\n"; 
 			
-unless($input_pscanchip_ris && $input_vdr_bv && $identifier && $motif_name && $PWM_FILE){
+unless($input_pscanchip_ris && $input_vdr_bv && $identifier && $motif_name && $PWM_FILE && $THRS_DIST){
 	print $USAGE;
 	exit -1;
 }
@@ -66,11 +72,13 @@ my $temp_pwm_bed_sorted     = $directory . $basename . '_' . $this_motif_id  . '
 my $data_closest            = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
 my $data_counts             = $directory . 'R_' . $this_motif_id  . '_counts.Rdata';
 my $data_histogram          = $directory . 'R_' . $this_motif_id  . '_histogram.Rdata';
-my $Rscript_counts          = $directory . 'R_' . $this_motif_id  . '_counts.R';
-my $Rscript_counts_pdf_all  = $directory . 'R_' . $this_motif_id  . '_counts_all.pdf';
-my $Rscript_counts_pdf_sub  = $directory . 'R_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.pdf';
-my $Rscript_histogram       = $directory . 'R_' . $this_motif_id  . '_histogram.R';
-my $Rscript_histogram_pdf   = $directory . 'R_' . $this_motif_id  . '_histogram.pdf';
+
+my $Rscript_counts           = $directory . 'R_' . $this_motif_id  . '_counts.R';
+my $Rscript_counts_plot_all  = $directory . 'R_' . $this_motif_id  . '_counts_all.svg';
+my $Rscript_counts_plot_sub  = $directory . 'R_' . $this_motif_id  . '_counts_dthrs_' . $THRS_DIST .  '.svg';
+my $Rscript_hist             = $directory . 'R_' . $this_motif_id  . '_hist.R';
+my $Rscript_hist_plot_all    = $directory . 'R_' . $this_motif_id  . '_hist_all.svg';
+my $Rscript_hist_plot_sub    = $directory . 'R_' . $this_motif_id  . '_hist_dthrs_' . $THRS_DIST .  '.svg';
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -145,30 +153,45 @@ system "$BEDTOOLS closest -D \"ref\" -a $input_vdr_bv -b $temp_pwm_bed_sorted -g
 #two, x,y pairs, to build point plots in R
 
 #get pure counts
-system "cat $data_closest  | cut -f 7 > $data_counts";
+system "cat $data_closest  | cut -f 7 > $data_histogram";
 #get x,y pairs, where x=distance and y=count at that distance
-system "cat $data_closest  | cut -f 7 | sort -k1,1n | uniq -c | sed \'s/^ *//g;s/ /\t/\'  > $data_histogram";
+system "cat $data_closest  | cut -f 7 | sort -k1,1n | uniq -c | sed \'s/^ *//g;s/ /\t/\'  > $data_counts";
 
 unlink $temp_pwm_bed;
 unlink $temp_pwm_bed_sorted;
 unlink $data_closest;
 
 #line plot
-open ($instream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
-print $instream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
-print $instream "pdf(file=\"$Rscript_counts_pdf_all\")" . "\n";
-print $instream "plot(data\$V2,data\$V1, type=\"p\", cex=.5)" . "\n";
-print $instream "dev.off()" . "\n";
-print $instream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
-print $instream "pdf(file=\"$Rscript_counts_pdf_sub\")" . "\n";
-print $instream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3)" . "\n";
-print $instream "dev.off()" . "\n";
-close $instream;
+open ($outstream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
+print $outstream "data <- read.table(\"$data_counts\",sep=\"\\t\")" . "\n";
+print $outstream "svg(file=\"$Rscript_counts_plot_all\")" . "\n";
+print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "dev.off()" . "\n";
+print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
+print $outstream "svg(file=\"$Rscript_counts_plot_sub\")" . "\n";
+print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "dev.off()" . "\n";
+close $outstream;
 
-system "RRscript $Rscript_counts";
+system "$RSCRIPT $Rscript_counts";
+
+
+open ($outstream,  q{>}, $Rscript_hist) or die("Unable to open $Rscript_hist : $!");
+print $outstream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
+print $outstream "svg(file=\"$Rscript_hist_plot_all\")" . "\n";
+print $outstream "hist(data\$V1, 100 xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "dev.off()" . "\n";
+print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
+print $outstream "svg(file=\"$Rscript_hist_plot_sub\")" . "\n";
+print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", title=\"Distribution of VDR-BVs around $full_motif_id PWM meta-profile\")" . "\n";
+print $outstream "dev.off()" . "\n";
+close $outstream;
+
+system "$RSCRIPT $Rscript_hist";
 
 unlink $data_counts;
 unlink $data_histogram;
+
 
 #dataline <- read.table("$data_histogram",sep="\t")
 #subdataline <- subset(dataline, V2 >= -500 & V2 <= 500, select=c(V1,V2))
