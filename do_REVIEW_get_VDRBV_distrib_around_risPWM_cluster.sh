@@ -37,17 +37,17 @@ for FILE in ${PDATA}/Pscanchip*.ris;
 	ID=`echo ${SEED} | cut -d _ -f 3`;
 	SCRIPT=script_PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.sh;
 
-    echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
-    echo '' >>${PDATA}/${SCRIPT};
-	#echo 'source activate'  >>${PDATA}/${SCRIPT};
+	echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
+ 	echo '' >>${PDATA}/${SCRIPT};
+	echo 'source activate'  >>${PDATA}/${SCRIPT};
 
 	if [ "${PSCORE}" = "NA"  ]
 	then
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${PDATA} -v=${PVDR} -t=${PTHRS} -p=${PPLOT}" >>${PDATA}/${SCRIPT};
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT}" >>${PDATA}/${SCRIPT};
 	else
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${PDATA} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE}" >>${PDATA}/${SCRIPT};
+		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE}" >>${PDATA}/${SCRIPT};
 	fi
 	
 	nice -5 qsub -e ${PDATA}/PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.out -q medium_jobs.q ${PDATA}/${SCRIPT};
-    rm ${PDATA}/${SCRIPT};  
+	rm ${PDATA}/${SCRIPT};  
 done
