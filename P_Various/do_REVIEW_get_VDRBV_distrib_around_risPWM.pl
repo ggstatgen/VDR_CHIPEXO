@@ -32,12 +32,12 @@ my $PLOT_EXT;
 my $MIN_SCORE;
 
 GetOptions(
-        'i_m=s'      =>\$input_pscanchip_ris,        
-		'v=s'       =>\$INPUT_VAR_BINARY,	
-        'm=s'		=>\$motif_name,		
+        'm=s'		=>\$input_pscanchip_ris,        
+	'v=s'		=>\$INPUT_VAR_BINARY,	
+        'n=s'		=>\$motif_name,		
         'id=s'		=>\$identifier,
-        't=i'       =>\$THRS_DIST,   
-        'p=s'       =>\$PLOT_EXT,
+        't=i'		=>\$THRS_DIST,   
+        'p=s'		=>\$PLOT_EXT,
         's=f'		=>\$MIN_SCORE            
 );
 #$input_pscanchip_ris = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/RIS_LINKS/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
@@ -46,7 +46,7 @@ GetOptions(
 #$MIN_SCORE = '0.8';
 #$THRS_DIST = 100;
 
-my $USAGE = "\nUSAGE: $0 -i_m=<INFILE_PSCANCHIP> -i_v=<BV|rBV> -m=<MOTIF_NAME> -id=<ID> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>\n" .
+my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -n=<MOTIF_NAME> -id=<ID> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>\n" .
 			"<INFILE_PSCANCHIP> ris file from PscanChip\n" .
 			"<BV|rBV> if BV, all VDRBV will be used; if rBV, only VDR-rBV will be used\n" .
 			"<MOTIF_NAME> string to use for the Motif PWM name in the output file\n" .			 
@@ -75,9 +75,10 @@ unless($PLOT_EXT eq 'jpg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_E
 print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
 my $this_motif_id = $motif_name . '_' . $identifier;
 
-
+$INPUT_VAR_BINARY = 'VDR-' . $INPUT_VAR_BINARY;
 my($basename, $directory) = fileparse($input_pscanchip_ris);
 $basename =~ s/(.*)\..*/$1/;
+
 my $temp_pwm_bed            = $directory . $basename . '_' . $this_motif_id  . '_temp.bed';
 my $temp_pwm_bed_sorted     = $directory . $basename . '_' . $this_motif_id  . '_temp.sorted.bed';
 my $data_closest            = $directory . $basename . '_' . $this_motif_id  . '_bedtools_closest.data';  
@@ -177,11 +178,11 @@ unlink $data_closest;
 open ($outstream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
 print $outstream "data <- read.table(\"$data_counts\",sep=\"\\t\")" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_all\")" . "\n";
-print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"VDR-BV profile around $full_motif_id\")" . "\n";
+print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"VDR-BV profile around $full_motif_id\")" . "\n";
+print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
@@ -190,11 +191,11 @@ system "$RSCRIPT $Rscript_counts";
 open ($outstream,  q{>}, $Rscript_hist) or die("Unable to open $Rscript_hist : $!");
 print $outstream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_all\")" . "\n";
-print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"VDR-BV distribution around $full_motif_id\")" . "\n";
+print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_sub\")" . "\n";
-print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"VDR-BV distribution around $full_motif_id\")" . "\n";
+print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
