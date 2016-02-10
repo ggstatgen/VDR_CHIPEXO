@@ -5,7 +5,7 @@
 #This script will collect the distances of each VDR-BV or VDR-rBV from the closest motif instance, and plot both a line profile and a histogram
 
 #synopsis
-#USAGE: do_REVIEW_get_VDRBV_distrib_around_risPWM.pl -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>
+#USAGE: do_REVIEW_get_VDRBV_distrib_around_risPWM.pl -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpeg|png> (opt)-s=<MINSCORE>
 #<INFILE_PSCANCHIP> ris file from PscanChip
 #<BV|rBV> if BV, all VDRBV will be used; if rBV, only VDR-rBV will be used
 #<THRS> Distance threshold cutoff for plot
@@ -13,11 +13,11 @@
 #optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)
 
 if [ ! $# == 5 ]; then
-	echo "Usage: `basename $0` <RIS_DIR> <BV|rBV> <THRS> <pdf|svg|jpg|png> <MINSCORE|NA>"
+	echo "Usage: `basename $0` <RIS_DIR> <BV|rBV> <THRS> <pdf|svg|jpeg|png> <MINSCORE|NA>"
 	echo "<RIS_DIR> - absolute path for the pscanchip files (.ris extension), one per TF"
 	echo "<BV|rBV> compute distances from VDR-BVs (~40,000) or VDR-rBVs (~350)?"        
 	echo "<THRS> distance threshold for thresholded plot: max distance from PWM to show on x-axis of plots"
-	echo "<PLOT> one of pdf,svg,jpg,png";
+	echo "<PLOT> one of pdf,svg,jpeg,png";
 	echo "<MINSCORE|NA> minimum pscanchip score to consider. NA if not required";
 	echo "paths to chrom sizes, VDR-BVs, VDR-rBVs bed are HARDCODED. Change if required.";
     exit
@@ -48,6 +48,6 @@ for FILE in ${PDATA}/Pscanchip*.ris;
 		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE}" >>${PDATA}/${SCRIPT};
 	fi
 	
-	nice -5 qsub -e ${PDATA}/PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.out -q medium_jobs.q ${PDATA}/${SCRIPT};
+	nice -5 qsub -e ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.log -q medium_jobs.q ${PDATA}/${SCRIPT};
 	rm ${PDATA}/${SCRIPT};  
 done

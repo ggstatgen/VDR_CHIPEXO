@@ -34,7 +34,7 @@ GetOptions(
         's=f'		=>\$MIN_SCORE            
 );
 
-my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpg|png> (opt)-s=<MINSCORE>\n" .
+my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpeg|png> (opt)-s=<MINSCORE>\n" .
 			"<INFILE_PSCANCHIP> ris file from PscanChip\n" .
 			"<BV|rBV> if BV, all VDRBV will be used; if rBV, only VDR-rBV will be used\n" .
 			"<THRS> Distance threshold cutoff for plot\n" .
@@ -54,7 +54,7 @@ if($INPUT_VAR_BINARY eq 'BV'){
 	print STDERR "ERROR: field -v not recognised: $INPUT_VAR_BINARY. Aborting.\n";
 	exit -1;
 }
-unless($PLOT_EXT eq 'jpg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_EXT eq 'pdf'){
+unless($PLOT_EXT eq 'jpeg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_EXT eq 'pdf'){
 	print STDERR "ERROR: field -p not recognised: $PLOT_EXT. Aborting.\n";
 	exit -1;
 }
@@ -190,7 +190,7 @@ print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\"
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_sub\")" . "\n";
-print $outstream "hist(sub_data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
+print $outstream "hist(sub_data\$V1, $THRS_DIST, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
