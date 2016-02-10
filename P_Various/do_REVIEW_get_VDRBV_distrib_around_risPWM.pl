@@ -25,6 +25,8 @@ my $motif_name;
 my $THRS_DIST;
 my $PLOT_EXT;
 my $MIN_SCORE;
+my $THRS_DIST_LARGE = 1000000; #In order to centre the large plots, I arbitrarily set an interval of +-1MB for visualisation
+
 
 GetOptions(
         'm=s'		=>\$input_pscanchip_ris,        
@@ -172,12 +174,13 @@ unlink $data_closest;
 #line plot
 open ($outstream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
 print $outstream "data <- read.table(\"$data_counts\",sep=\"\\t\")" . "\n";
+print $outstream "sub_dataL <- subset(data, V2 >= -$THRS_DIST_LARGE & V2 <= $THRS_DIST_LARGE, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_all\")" . "\n";
-print $outstream "plot(data\$V2,data\$V1, type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id\")" . "\n";
+print $outstream "plot(sub_dataL\$V2,log10(sub_dataL\$V1), type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-1Mb)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\#Observations\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
+print $outstream "plot(sub_data\$V2,log10(sub_data\$V1), type=\"p\", cex=.3, xlim=c(-$THRS_DIST,$THRS_DIST), xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
@@ -186,11 +189,11 @@ system "$RSCRIPT $Rscript_counts";
 open ($outstream,  q{>}, $Rscript_hist) or die("Unable to open $Rscript_hist : $!");
 print $outstream "data <- read.table(\"$data_histogram\",sep=\"\\t\")" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_all\")" . "\n";
-print $outstream "hist(data\$V1, 100, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id\")" . "\n";
+print $outstream "hist(data\$V1, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"\Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V1 >= -$THRS_DIST & V1 <= $THRS_DIST)" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_hist_plot_sub\")" . "\n";
-print $outstream "hist(sub_data\$V1, $THRS_DIST, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
+print $outstream "hist(sub_data\$V1,  xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"Frequency\", main=\"$INPUT_VAR_BINARY distribution around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
