@@ -32,8 +32,8 @@ my $MIN_SCORE;
 my $input_variants;
 
 GetOptions(
-        'data=s'   			=>\$INPUT_PSCANCHIP_RIS_DIR,        
-		'variants=s'		=>\$INPUT_VAR_BINARY,
+        'data=s'   		=>\$INPUT_PSCANCHIP_RIS_DIR,        
+	'variants=s'		=>\$INPUT_VAR_BINARY,
         'pwmscore=f'		=>\$MIN_SCORE            
 );
 my $USAGE = "\nUSAGE: $0 -data=<INFILE_PSCANCHIP_DIR> -variants=<BV|rBV> (opt) -pwmscore=<MINSCORE>\n" .
@@ -147,8 +147,9 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	#write R code 
 	open ($outstream,  q{>}, $temp_Rcode) or die("Unable to open $temp_Rcode : $!");
 	print $outstream "data <- read.table(\"$temp_Rdata\",sep=\"\\t\")" . "\n";
+	print $outstream "sub_data <- subset(data, V1 > 0)" . "\n";
 	print $outstream "png(file=\"$out_Rplot\")" . "\n";
-	print $outstream "hist(data\$V1, xlab=\"#INPUT_VAR_BINARY per motif instance\", ylab=\"Motif Count\", main=\"$INPUT_VAR_BINARY cardinality in $this_pwm instances\")" . "\n";
+	print $outstream "hist(sub_data\$V1, xlab=\"#INPUT_VAR_BINARY per motif instance\", ylab=\"Motif Count\", col=\"blue\", main=\"$INPUT_VAR_BINARY cardinality in $this_pwm instances\")" . "\n";
 	print $outstream "dev.off()" . "\n";
 	close $outstream;
 	system "$RSCRIPT $temp_Rcode";
@@ -156,5 +157,5 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_pwm_bed;
 	unlink $temp_Rdata;
 	unlink $temp_Rcode;
-	exit;
+	#exit;
 }
