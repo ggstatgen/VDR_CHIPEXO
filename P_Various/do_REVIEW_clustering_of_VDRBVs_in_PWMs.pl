@@ -87,7 +87,6 @@ my %pwm_intervals; #pwm_intervals{PWM_i}{interval_j} = 1
 chdir $INPUT_PSCANCHIP_RIS_DIR;
 my @files = <Pscanchip*.ris>;
 foreach my $FILE (@files){
-	print $FILE, "\n";
 	#get motif name and id from the filename
 	#eg Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites
 	if($FILE =~ /BVs_(.*)_(.*)_sites/){
@@ -130,14 +129,15 @@ foreach my $FILE (@files){
 	close $instream;
 }
 
-my %tsv_line;
+unless($MIN_SCORE) { $MIN_SCORE = 'NA'; }
+#my %tsv_line;
 #make a small histogram for each pwm showing the number of VDR-BVs per motif interval
 foreach my $this_pwm (sort keys %pwm_intervals){
 	print $this_pwm, "\n";
 	my $temp_pwm_bed   = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.bed';
 	my $temp_Rcode     = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.R';
 	my $temp_Rdata     = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.Rdata';	
-	my $out_Rplot      = $INPUT_PSCANCHIP_RIS_DIR . '/plot_vdrbvhist_' . $this_pwm . '.png';
+	my $out_Rplot      = $INPUT_PSCANCHIP_RIS_DIR . '/plot_vdrbvhist_' . $this_pwm . '_' .  $INPUT_VAR_BINARY . '_minPWMscore_' . $MIN_SCORE . '.png';
 	open (my $outstream,  q{>}, $temp_pwm_bed) or die("Unable to open $temp_pwm_bed : $!");
 	foreach my $this_pwm_interval (sort keys %{$pwm_intervals{$this_pwm}}){
 		print $outstream $this_pwm_interval, "\n";
@@ -145,18 +145,20 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	close $outstream;
 	system "$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort > $temp_Rdata";
 	
-	my $hist = `$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort | uniq -c`;
-	chomp $hist;
-	$hist =~ s/\n/\t/g;
-	$hist = $this_pwm . "\t" . $hist;
-	$tsv_line{$hist} = 1
+	#my $hist = `$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort | uniq -c`;
+	#chomp $hist;
+	#$hist =~ s/\n/\t/g;
+	#$hist = $this_pwm . "\t" . $hist;
+	#$tsv_line{$hist} = 1;
 	
 	#write R code 
 	open ($outstream,  q{>}, $temp_Rcode) or die("Unable to open $temp_Rcode : $!");
 	print $outstream "data <- read.table(\"$temp_Rdata\",sep=\"\\t\")" . "\n";
-	print $outstream "sub_data <- subset(data, V1 > 0)" . "\n";
+#	print $outstream "sub_data <- subset(data, V1 > 0)" . "\n";
+	print $outstream "data_c <- table(data)" . "\n";
 	print $outstream "png(file=\"$out_Rplot\")" . "\n";
-	print $outstream "hist(sub_data\$V1, xlab=\"#INPUT_VAR_BINARY per motif instance\", ylab=\"Motif Count\", col=\"blue\", main=\"$INPUT_VAR_BINARY cardinality in $this_pwm instances\")" . "\n";
+	print $outstream "bplt <- barplot(data_c, xlab=\"\#$INPUT_VAR_BINARY per motif instance\", ylab=\"Motif Count\", width=1, main=\"$INPUT_VAR_BINARY cardinality ($this_pwm; thrs=$MIN_SCORE)\")" . "\n";
+	print $outstream "text(x=bplt, y=data_c, labels=as.character(data_c), pos=3, cex = 0.8, col = \"red\", xpd=TRUE)" . "\n";
 	print $outstream "dev.off()" . "\n";
 	close $outstream;
 	system "$RSCRIPT $temp_Rcode";
@@ -168,4 +170,7 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 }
 
 #print output
-foreach my $item (%tsv_line}){ print STDOUT $item, "\n"};
+#my $out_table = $INPUT_PSCANCHIP_RIS_DIR . '/TABLE_vdrbv_cardinality.tsv';
+#open (my $outstream,  q{>}, $out_table) or die("Unable to open $out_table : $!");
+#foreach my $item (%tsv_line){ print $outstream $item, "\n"};
+#close $outstream;
