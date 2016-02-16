@@ -130,7 +130,7 @@ foreach my $FILE (@files){
 	close $instream;
 }
 
-
+my %tsv_line;
 #make a small histogram for each pwm showing the number of VDR-BVs per motif interval
 foreach my $this_pwm (sort keys %pwm_intervals){
 	print $this_pwm, "\n";
@@ -144,6 +144,13 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	}
 	close $outstream;
 	system "$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort > $temp_Rdata";
+	
+	my $hist = `$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort | uniq -c`;
+	chomp $hist;
+	$hist =~ s/\n/\t/g;
+	$hist = $this_pwm . "\t" . $hist;
+	$tsv_line{$hist} = 1
+	
 	#write R code 
 	open ($outstream,  q{>}, $temp_Rcode) or die("Unable to open $temp_Rcode : $!");
 	print $outstream "data <- read.table(\"$temp_Rdata\",sep=\"\\t\")" . "\n";
@@ -159,3 +166,6 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_Rcode;
 	#exit;
 }
+
+#print output
+foreach my $item (%tsv_line}){ print STDOUT $item, "\n"};
