@@ -12,11 +12,15 @@ use Getopt::Long;
 #while (my $pair = $combinations->next) {
 
 #1st QUESTION - how many VDR-BVs in each RXRA:VDR motif?
-#I want to plot a histogram depicting how many intersections with a VDR-BV does every RXRA:VDR motif instance have.
+#I want to plot a histogram depicting how many intersections with a VDR-BV does every PWM motif instance have.
 #So, I know only a proportion of VDR-BV intersect strong motifs at all. 
 #Are there any such motifs hit by MORE than 1 VDR-BVs? If so what's their score? Where are they?
 
-#2nd QUESTION:how many VDR-BV hit 1)no PWM 2)one PWM ... 3)n DISTINCT PWMs?
+#2nd QUESTION:how many VDR-BV hit 1)no PWM 2)one PWM ... 3)n DISTINCT PWMs? (like the one before but with all pwms, or a selection?)
+#output: annotated tsv, sayingm for each vdrbv, the list of pwms which are hit and the score.
+
+#3rd QUESTION - intorno di vdrbv
+#if i pick a vdrbv hitting ANY motif, are there any other good motif PWMs for other tfs in the surroundings??
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
