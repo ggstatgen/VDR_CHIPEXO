@@ -3,13 +3,15 @@ use strict;
 use warnings;
 use Getopt::Long;
 
-#16/1
+#quick script to turn the Pscanchip .ris motif files in a format compatible with the funseq annotation "ENCODE.tf.bound.union.bed"
+#create this, then append to the existing annotation in funseq, sort, gzip
+
+#NOTES
+#16/1/2016
 #Now I incorporate code to do both checks in here:
 #check pwm in interval actually hits the vdrbv
 #check pwm in interval has score >= optional score threshold
 
-#NOTE 
-#
 #6/1/2016
 #Having shown the results to Chris, he says they are too noisy. 
 #So I want to implement a new feature: I want this to be able to output only intervals within a certain pscanchip score
@@ -19,9 +21,6 @@ use Getopt::Long;
 ##The only way to solve this is to have a file with the ACTUAL pwm sizes from Jaspar, indications are on the google drive doc
 #I generated one from the Jaspar and I link it here. You need to slurp it and count the sizes of the PWM and check the interval in the .ris file is correct
 #OTHERWISE FUNSEQ2 complains
-
-#quick script to turn the Pscanchip .ris motif files in a format compatible with the funseq annotation "ENCODE.tf.bound.union.bed"
-#create this, then append to the existing annotation in funseq, sort, gzip
 
 #AFTER FAILING TO GET RESULTS from funseq, I noticed that the length of the motif returned from pscanchip is ONE NT SHORTER than the length of the motif inferred by funseq from the PFM. So I now OPEN the start coordinate (-1)
 #ATTENTION 20/11: opening the coordinate gives me a truncated motif. I need to ADD ONE TO THE END COORDINATE from pscanchip
@@ -63,7 +62,6 @@ GetOptions(
         's=f'		=>\$MIN_SCORE
 );
 
-#$PWM_FILE="/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 
 my $USAGE = "USAGE: do_funseq_adapt_motiffile.pl -i_vcf=<INFILE_VDRBV> -i_ris=<INFILE_RIS> -pwm=<ENCODE_PWM_FILE> -id=<ID> -m=<MOTIF_NAME> (opt)-s=<MINSCORE>\n" .
 		"<INFILE_VDRBV>  .vcf file out of funseq, with the VDR-BVs"  .
@@ -174,10 +172,10 @@ while(<$instream>){
 }
 close $instream;
 
-print STDERR "Number of .ris intervals discarded because of score: $counter_failscore\n";
-print STDERR "Number of .ris intervals discarded because no VDR-BV is in the PWM motif: $counter_failinterval\n";
-print STDERR "Number of .ris intervals kept in output: $counter_successful\n";
-print STDERR 'FINISHED.';
+#print STDERR "\nNumber of .ris intervals discarded because of score: $counter_failscore\n";
+#print STDERR "Number of .ris intervals discarded because no VDR-BV is in the PWM motif: $counter_failinterval\n";
+#print STDERR "Number of .ris intervals kept in output: $counter_successful\n";
+#print STDERR 'FINISHED.';
 
 #############
 # should return TRUE if the ris interval contains at least a VDR-BV; under otherwise
