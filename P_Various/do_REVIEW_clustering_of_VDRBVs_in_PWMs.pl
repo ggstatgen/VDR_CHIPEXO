@@ -94,11 +94,11 @@ while(<$instream>){
 }
 close $instream;
 
-####
-#1 slurp vcf VDR-BVs indexed by coordinate (needed for question 2)
-####
+#####
+##1 slurp VDR-BV vcf indexed by coordinate (needed for question 2)
+#####
 #my %VDRBV_library;
-#open ($instream,  q{<}, $IN_VDRBV_VCF) or die("Unable to open $IN_VDRBV_VCF : $!");
+#open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
 #while(<$instream>){
 #	chomp;
 #	next if($_ =~ /^\#/);
@@ -114,7 +114,6 @@ close $instream;
 
 ####################
 #2 get all PWM intervals from the directory, check length against pwms
-# if the interval is hit by a VDR-BV, add info in the hash $VDRBV_library
 ####################
 my %pwm_intervals; #pwm_intervals{PWM_i}{interval_j} = 1
 chdir $INPUT_PSCANCHIP_RIS_DIR;
@@ -157,37 +156,13 @@ foreach my $FILE (@files){
 		}
 		my $this_motif_interval = $chr . "\t" . $motif_start . "\t" . $motif_end;
 		$pwm_intervals{$full_motif_id}{$this_motif_interval} = 1;		
-		#the following will run through all VDR-BVs and check if any of them is in this PWM interval. If so, the corresponding entry is 
-		#augmented with a flag and with the name of the pwm hit
-		#flag_VDRBVs_in_PWM_interval($full_motif_id, $chr, $motif_start, $motif_end, \%VDRBV_library);
 	}
 	close $instream;
 }
 
 
-#print Dumper(\%VDRBV_library);
-#exit;
-####
-#3 print out a tsv file of those vdr-bv falling in at least 1 DISTINCT PWM model
-####
-#my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
-#open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
-#print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
-#foreach my $item (keys %VDRBV_library){
-#	my @pwmlist; #list of comma separated PWMs that are hit
-#	my $pwmstring;
-#	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}{'PWM'}}){ push (@pwmlist,$pwm_hit);  }
-#	$pwmstring = join(",", @pwmlist);
-#	next if(!$pwmstring || ($pwmstring = '') );
-#	
-#	my ($chr, $pos) = split('-', $item);
-#	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item}{'VCFDATA'} . "\t" . $pwmstring;
-#	print $outstream $string, "\n";
-#}
-#close $outstream;
-
 ########
-#4 for each PWM model, save one png R file showing a histogram with the number of VDR-BV hitting each model.
+#3 for each PWM model, save one png R file showing a histogram with the number of VDR-BV hitting each model.
 ########
 unless($MIN_SCORE) { $MIN_SCORE = 'NA'; }
 #make a small histogram for each pwm showing the number of VDR-BVs per motif interval
@@ -214,7 +189,6 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 		my @line = split("\t",$_);
 		my $chr = shift @line;
 		my $pos = shift @line;
-		my $line = join("\t", @line);
 		my $coord = $chr . '-' . $pos;
 		$VDRBV_intersections{$coord}{$this_pwm} = 1;
 	}
@@ -239,37 +213,42 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_pwm_bed_o;
 }
 
-
-foreach my $item (sort keys %VDRBV_intersections){
-	foreach my $pwm (keys %{ $VDRBV_intersections{$item} }){
-		print $item, "\t", $pwm, "\n";
-	}
+#plot .tsv of vdr-bv positions followed by a string indicating all the UNIQUE PWMs they hit
+my $out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
+print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
+foreach my $vdr_coord (sort  { $a <=> $b } keys %VDRBV_intersections){
+	my @pwmstring; my $pwmlist;
+	foreach my $pwm (keys %{ $VDRBV_intersections{$vdr_coord} }){ push(@pwmstring,$pwm); }
+	$pwmlist = join(',',@pwmstring);
+	my ($chr, $pos) = split('-',$vdr_coord);
+	print $outstream $chr . "\t" . $pos . "\t" . $pwmlist, "\n";
 }
+close $outstream;
 
-
+#print Dumper(\%VDRBV_library);
+#exit;
+####
+#3 print out a tsv file of those vdr-bv falling in at least 1 DISTINCT PWM model
+####
+#my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+#open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
+#print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
+#foreach my $item (keys %VDRBV_library){
+#	my @pwmlist; #list of comma separated PWMs that are hit
+#	my $pwmstring;
+#	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}{'PWM'}}){ push (@pwmlist,$pwm_hit);  }
+#	$pwmstring = join(",", @pwmlist);
+#	next if(!$pwmstring || ($pwmstring = '') );
+#	
+#	my ($chr, $pos) = split('-', $item);
+#	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item}{'VCFDATA'} . "\t" . $pwmstring;
+#	print $outstream $string, "\n";
+#}
+#close $outstream;
 
 #print output
 #my $out_table = $INPUT_PSCANCHIP_RIS_DIR . '/TABLE_vdrbv_cardinality.tsv';
 #open (my $outstream,  q{>}, $out_table) or die("Unable to open $out_table : $!");
 #foreach my $item (%tsv_line){ print $outstream $item, "\n"};
 #close $outstream;
-
-
-
-
-#############
-# This takes the data structure with all the VDR-BVs and flags them if they hit this PWM at this interval.
-#############
-sub flag_VDRBVs_in_PWM_interval{
-	my ($this_pwm_name, $thischr, $int_start, $int_end, $vdrbv_hash) = @_;
-	
-	foreach my $item (keys %{$vdrbv_hash}){
-		my ($vdrbv_chr, $vdrbv_pos) = split('-', $item);
-		
-		if( ($thischr eq $vdrbv_chr) && ($vdrbv_pos >= $int_start) && ($vdrbv_pos <= $int_end ) ){
-			$$vdrbv_hash{$item}->{"PWM"}->{$this_pwm_name} = 1;
-			#print Dumper($$vdrbv_hash{$item});
-		}
-	}
-	return;
-}
