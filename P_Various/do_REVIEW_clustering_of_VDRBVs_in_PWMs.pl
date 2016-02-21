@@ -26,7 +26,6 @@ use Data::Dumper;
 #if i pick a vdrbv hitting ANY motif, are there any other good motif PWMs for other tfs in the surroundings??
 
 
-
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 
@@ -93,23 +92,6 @@ while(<$instream>){
 	}
 }
 close $instream;
-
-#####
-##1 slurp VDR-BV vcf indexed by coordinate (needed for question 2)
-#####
-#my %VDRBV_library;
-#open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
-#while(<$instream>){
-#	chomp;
-#	next if($_ =~ /^\#/);
-#	next if($_ eq '');
-#	my @line = split("\t",$_);
-#	my $chr = shift @line;
-#	my $pos = shift @line;
-#	my $line = join("\t", @line);
-#	my $coord = $chr . '-' . $pos;
-#	$VDRBV_library{$coord}{'VCFDATA'} = $line;
-#}
 
 
 ####################
@@ -182,7 +164,7 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	system "$BEDTOOLS intersect -a $input_variants_vcf -b  $temp_pwm_bed > $temp_pwm_bed_o";
 	system "$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort > $temp_Rdata";
 
-	#process vcf lines and save in structure
+	#process vcf lines and save in structure (for point 4)
 	open (my $instream,  q{<}, $temp_pwm_bed_o) or die("Unable to open $temp_pwm_bed_o : $!");
 	while(<$instream>){
 		chomp $_;
@@ -213,42 +195,67 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_pwm_bed_o;
 }
 
-#plot .tsv of vdr-bv positions followed by a string indicating all the UNIQUE PWMs they hit
+
+#####
+##4 go through VDR-BVs and print tsv. with three additional fields IF there is at least 1 intersection. Print: 
+#a. number of intersections with unique enriched PWMs
+#b. list of PWM ids
+#c. whether RXRA::VDR is one of them
+#####
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO
+#I want chrom, pos, id, ref, alt, INFO(gene) + new ones (n.pwms hit?which pwms?is vdr one of them?)
 my $out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
 open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
-print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
-foreach my $vdr_coord (sort keys %VDRBV_intersections){
-	my @pwmstring; my $pwmlist;
-	foreach my $pwm (keys %{ $VDRBV_intersections{$vdr_coord} }){ push(@pwmstring,$pwm); }
-	$pwmlist = join(',',@pwmstring);
-	my ($chr, $pos) = split('-',$vdr_coord);
-	print $outstream $chr . "\t" . $pos . "\t" . $pwmlist, "\n";
+print $outstream "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\n";
+open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
+while(<$instream>){
+	chomp;
+	next if($_ =~ /^\#/);
+	next if($_ eq '');
+	my @line = split("\t",$_);
+	my $coord = $line[0] . '-' . $line[1];
+	my @pwmstring; my $pwmlist = ''; my $counter = 0; my $VDR_DR3_FOUND = '';
+	
+	#now search the catalogue of intersections with this line
+	if($VDRBV_intersections{$coord}){
+		foreach my $pwm (keys %{ $VDRBV_intersections{$coord} }){
+			if($pwm =~ /MA0074.1/){ $VDR_DR3_FOUND = 'Y'; } 
+			push(@pwmstring,$pwm);
+			$counter++; 
+		}
+		my @sorted_pwmstring = sort @pwmstring;
+		$pwmlist = join(',',@sorted_pwmstring);																
+	}
+	
+	my $gene_info = get_gene_info($line[7]);
+	my $line =  $line[0]   . "\t" . 
+				$line[1]   . "\t" . 
+				$line[2]   . "\t" .
+				$line[3]   . "\t" .
+				$line[4]   . "\t" .
+				$gene_info . "\t" .
+				$counter   . "\t" .
+				$pwmlist   . "\t" . 
+				$VDR_DR3_FOUND;
+	print $outstream $line, "\n";
 }
+close $instream;
 close $outstream;
 
-#print Dumper(\%VDRBV_library);
-#exit;
-####
-#3 print out a tsv file of those vdr-bv falling in at least 1 DISTINCT PWM model
-####
-#my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
-#open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
-#print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
-#foreach my $item (keys %VDRBV_library){
-#	my @pwmlist; #list of comma separated PWMs that are hit
-#	my $pwmstring;
-#	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}{'PWM'}}){ push (@pwmlist,$pwm_hit);  }
-#	$pwmstring = join(",", @pwmlist);
-#	next if(!$pwmstring || ($pwmstring = '') );
-#	
-#	my ($chr, $pos) = split('-', $item);
-#	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item}{'VCFDATA'} . "\t" . $pwmstring;
-#	print $outstream $string, "\n";
-#}
-#close $outstream;
+#sort and get unique out
 
-#print output
-#my $out_table = $INPUT_PSCANCHIP_RIS_DIR . '/TABLE_vdrbv_cardinality.tsv';
-#open (my $outstream,  q{>}, $out_table) or die("Unable to open $out_table : $!");
-#foreach my $item (%tsv_line){ print $outstream $item, "\n"};
-#close $outstream;
+#############
+#subs
+#############
+#only keep GENE info, if available, from the funseq2 annotation
+#SAMPLE=interestingHets_NA06986_EBLfiltered_hg19;GERP=1.01;CDS=No;HUB=EXOSC7:PHOS(0.947)PPI(0.739);GENE=EXOSC7(Intron);NCDS=0.844214221203786
+sub get_gene_info{
+	my ($this_info_string) = @_;
+	my $gene_field = 'NA';
+	
+	my @fields = split(";", $this_info_string);
+	foreach my $item (@fields){
+		$gene_field = $item if($item =~ /^GENE/);
+	}
+	return $gene_field;
+}
