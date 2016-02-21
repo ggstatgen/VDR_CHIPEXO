@@ -69,16 +69,6 @@ unless($PLOT_EXT eq 'jpeg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_
 	exit -1;
 }
 
-print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
-if($INTERVALS){
-	print STDERR "Getting rid of input variants intersecting intervals in $INTERVALS\n" if($INTERVALS);
-	system "$BEDTOOLS intersect -v -a $temp_vars -b $INTERVALS > $input_variants";
-}else{
-	$input_variants = $temp_vars;
-}
-#unlink $temp_vars;
-exit;
-
 $INPUT_VAR_BINARY = 'VDR-' . $INPUT_VAR_BINARY;
 my($basename, $directory) = fileparse($input_pscanchip_ris);
 $basename =~ s/(.*)\..*/$1/;
@@ -118,6 +108,17 @@ if($INTERVALS){
 	$Rscript_hist_plot_all    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_all.'                         . $PLOT_EXT;
 	$Rscript_hist_plot_sub    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_dthrs_'   . $THRS_DIST .  '.' . $PLOT_EXT;
 }
+
+
+print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
+if($INTERVALS){
+	$input_variants = $directory . 'TEMP_inputvariants.bed';
+	print STDERR "Getting rid of input variants intersecting intervals in $INTERVALS\n" if($INTERVALS);
+	system "$BEDTOOLS intersect -v -a $temp_vars -b $INTERVALS > $input_variants";
+}else{
+	$input_variants = $temp_vars;
+}
+
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
