@@ -17,16 +17,21 @@ use Getopt::Long;
 #Are there any such motifs hit by MORE than 1 VDR-BVs? If so what's their score? Where are they?
 
 #2nd QUESTION:how many VDR-BV hit 1)no PWM 2)one PWM ... 3)n DISTINCT PWMs? (like the one before but with all pwms, or a selection?)
-#output: annotated tsv, sayingm for each vdrbv, the list of pwms which are hit and the score.
+#output: annotated tsv, saying for each vdrbv, the list of pwms which are hit and the score.
+
+#for now, save in a tsv. the initial .vcf of variants ONLY when they hit > 1 PWMs
 
 #3rd QUESTION - intorno di vdrbv
 #if i pick a vdrbv hitting ANY motif, are there any other good motif PWMs for other tfs in the surroundings??
+
+
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 
 my $IN_VDRBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed';
 my $IN_VDRrBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_VDR_rBVs_hg19.bed';
+my $IN_VDRBV_VCF = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf';
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 my $INPUT_PSCANCHIP_RIS_DIR;
 my $identifier;
@@ -84,8 +89,27 @@ while(<$instream>){
 }
 close $instream;
 
+####
+#1 slurp vcf VDR-BVs indexed by coordinate (needed for question 2)
+####
+my %VDRBV_library;
+open ($instream,  q{<}, $IN_VDRBV_VCF) or die("Unable to open $IN_VDRBV_VCF : $!");
+while(<$instream>){
+	chomp;
+	next if($_ =~ /^\#/);
+	next if($_ eq '');
+	my @line = split("\t",$_);
+	my $chr = shift @line;
+	my $pos = shift @line;
+	my $line = join("\t", @line);
+	my $coord = $chr . '-' . $pos;
+	$VDRBV_library{$coord} = $line;
+}
+
+
 ####################
-#1 get all PWM intervals from the directory, check length against pwms
+#2 get all PWM intervals from the directory, check length against pwms
+# if the interval is hit by a VDR-BV, add info in the hash $VDRBV_library
 ####################
 my %pwm_intervals; #pwm_intervals{PWM_i}{interval_j} = 1
 chdir $INPUT_PSCANCHIP_RIS_DIR;
@@ -108,7 +132,6 @@ foreach my $FILE (@files){
 	my $full_motif_id = $motif_name . '_' . $identifier;
 	my $ref = $motif{$full_motif_id};
 	my $MOTIF_LENGTH = scalar(@$ref); 
-	print STDERR "The length of the motif: $full_motif_id according to the JASPAR Pwm is $MOTIF_LENGTH\n";	
 	
 	open ($instream,  q{<}, $FILE) or die("Unable to open $FILE : $!");
 	while(<$instream>){
@@ -129,12 +152,37 @@ foreach my $FILE (@files){
 		}
 		my $this_motif_interval = $chr . "\t" . $motif_start . "\t" . $motif_end;
 		$pwm_intervals{$full_motif_id}{$this_motif_interval} = 1;		
+		
+		#the following will run through all VDR-BVs and check if any of them is in this PWM interval. If so, the corresponding entry is 
+		#augmented with a flag and with the name of the pwm hit
+		flag_VDRBVs_in_PWM_interval($full_motif_id, $chr, $motif_start, $motif_end, \%VDRBV_library);
 	}
 	close $instream;
 }
 
+####
+#3 print out a tsv file of those vdr-bv falling in at least 1 DISTINCT PWM model
+####
+my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
+print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
+foreach my $item (sort keys %VDRBV_library){
+	my @pwmlist; #list of comma separated PWMs that are hit
+	my $pwmstring;
+	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}}){ push (@pwmlist,$pwm_hit);  }
+	$pwmstring = join(",", @pwmlist);
+	next if(!$pwmstring || ($pwmstring = '') );
+	
+	my ($chr, $pos) = split('-', $item);
+	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item} . "\t" . $pwmstring;
+	print $outstream $string, "\n";
+}
+close $outstream;
+
+########
+#4 for each PWM model, save one png R file showing a histogram with the number of VDR-BV hitting each model.
+########
 unless($MIN_SCORE) { $MIN_SCORE = 'NA'; }
-#my %tsv_line;
 #make a small histogram for each pwm showing the number of VDR-BVs per motif interval
 foreach my $this_pwm (sort keys %pwm_intervals){
 	print $this_pwm, "\n";
@@ -170,7 +218,6 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_pwm_bed;
 	unlink $temp_Rdata;
 	unlink $temp_Rcode;
-	#exit;
 }
 
 #print output
@@ -178,3 +225,23 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 #open (my $outstream,  q{>}, $out_table) or die("Unable to open $out_table : $!");
 #foreach my $item (%tsv_line){ print $outstream $item, "\n"};
 #close $outstream;
+
+
+
+
+#############
+# This takes the data structure with all the VDR-BVs and flags them if they hit this PWM at this interval.
+#############
+sub flag_VDRBVs_in_PWM_interval{
+	my ($this_pwm_name, $thischr, $int_start, $int_end, $vdrbv_hash) = @_;
+	
+	foreach my $item (keys %{$vdrbv_hash}){
+		my ($vdrbv_chr, $vdrbv_pos) = split('-', $item);
+		
+		if( ($thischr eq $vdrbv_chr) && ($vdrbv_pos >= $int_start) && ($vdrbv_pos <= $int_end ) ){
+			$$vdrbv_hash{$item}{$this_pwm_name} = 1;
+			return;
+		}
+	}
+	return;
+}
