@@ -12,13 +12,14 @@
 #<PLOT> type of R output plot desired
 #optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)
 
-if [ ! $# == 5 ]; then
-	echo "Usage: `basename $0` <RIS_DIR> <BV|rBV> <THRS> <pdf|svg|jpeg|png> <MINSCORE|NA>"
+if [ ! $# == 6 ]; then
+	echo "Usage: `basename $0` <RIS_DIR> <BV|rBV> <THRS> <pdf|svg|jpeg|png> <MINSCORE|NA>i <INTERVALS>"
 	echo "<RIS_DIR> - absolute path for the pscanchip files (.ris extension), one per TF"
 	echo "<BV|rBV> compute distances from VDR-BVs (~40,000) or VDR-rBVs (~350)?"        
 	echo "<THRS> distance threshold for thresholded plot: max distance from PWM to show on x-axis of plots"
 	echo "<PLOT> one of pdf,svg,jpeg,png";
 	echo "<MINSCORE|NA> minimum pscanchip score to consider. NA if not required";
+	echo "<INTERVALS> hg19 .bed file of intervals to filter VDR-BV against. NA if not required"
 	echo "paths to chrom sizes, VDR-BVs, VDR-rBVs bed are HARDCODED. Change if required.";
     exit
 fi
@@ -28,6 +29,7 @@ PVDR=$2;
 PTHRS=$3;
 PPLOT=$4;
 PSCORE=$5;
+PSUBSET=$6;
 PCODE="/net/isi-backup/giuseppe/scripts/P_Various/do_REVIEW_get_VDRBV_distrib_around_risPWM.pl";
 
 for FILE in ${PDATA}/Pscanchip*.ris;
@@ -35,19 +37,37 @@ for FILE in ${PDATA}/Pscanchip*.ris;
 	SEED=`echo ${FILE} | grep -Po "BVs_(.*)_sites"`;
 	TF=`echo ${SEED} | cut -d _ -f 2`;
 	ID=`echo ${SEED} | cut -d _ -f 3`;
-	SCRIPT=script_PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.sh;
 
-	echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
- 	echo '' >>${PDATA}/${SCRIPT};
-	echo 'source activate'  >>${PDATA}/${SCRIPT};
-
-	if [ "${PSCORE}" = "NA"  ]
+	if [ "${PSUBSET}" = "NA"  ]
 	then
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT}" >>${PDATA}/${SCRIPT};
-	else
-		echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE}" >>${PDATA}/${SCRIPT};
-	fi
+		SCRIPT=script_PWMdist_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.sh;
+	        echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
+	       	echo '' >>${PDATA}/${SCRIPT};
+	        echo 'source activate'  >>${PDATA}/${SCRIPT};
+
+	        if [ "${PSCORE}" = "NA"  ]
+	        then
+	                echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT}" >>${PDATA}/${SCRIPT};
+	        else
+	                echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE}" >>${PDATA}/${SCRIPT};
+	        fi
 	
-	nice -5 qsub -e ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.log -q medium_jobs.q ${PDATA}/${SCRIPT};
-	rm ${PDATA}/${SCRIPT};  
+	        nice -5 qsub -e ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/Dist_PWM_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.log -q medium_jobs.q ${PDATA}/${SCRIPT};
+	        rm ${PDATA}/${SCRIPT};
+	else
+		SCRIPT=script_PWMdist_subsetbed_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.sh;
+		echo '#!/bin/bash' >>${PDATA}/${SCRIPT};
+	 	echo '' >>${PDATA}/${SCRIPT};
+		echo 'source activate'  >>${PDATA}/${SCRIPT};
+	
+		if [ "${PSCORE}" = "NA"  ]
+		then
+			echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -bl=${PSUBSET}" >>${PDATA}/${SCRIPT};
+		else
+			echo "/net/isi-cgat/ifs/apps/apps/perl-5.16.1/bin/perl ${PCODE} -m=${FILE} -v=${PVDR} -t=${PTHRS} -p=${PPLOT} -s=${PSCORE} -bl=${PSUBSET}" >>${PDATA}/${SCRIPT};
+		fi
+	
+		nice -5 qsub -e ${PDATA}/Dist_PWM_subsetbed_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.err -o ${PDATA}/Dist_PWM_subsetbed_${TF}_${ID}_VDR-${PVDR}_thrs${PTHRS}_plot${PPLOT}_score${PSCORE}.log -q medium_jobs.q ${PDATA}/${SCRIPT};
+		rm ${PDATA}/${SCRIPT};  
+	fi
 done

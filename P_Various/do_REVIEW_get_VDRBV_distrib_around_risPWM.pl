@@ -112,14 +112,12 @@ if($INTERVALS){
 
 print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
 if($INTERVALS){
-	$input_variants = $directory . 'TEMP_inputvariants.bed';
-	print STDERR "Getting rid of input variants intersecting intervals in $INTERVALS\n" if($INTERVALS);
+	$input_variants = $directory . 'TEMP' .  $INPUT_VAR_BINARY . '_' . $this_motif_id .   '_inputvariants.bed';
+	print STDERR "Getting rid of input variants intersecting intervals in $INTERVALS\n";
 	system "$BEDTOOLS intersect -v -a $temp_vars -b $INTERVALS > $input_variants";
 }else{
 	$input_variants = $temp_vars;
 }
-
-
 #######
 #1 get the REAL motif length from the encode representations of the motif
 #######
@@ -188,6 +186,7 @@ close $outstream;
 system "cat $temp_pwm_bed | sort -k1,1V -k2,2n | uniq > $temp_pwm_bed_sorted";
 #get closeness data
 system "$BEDTOOLS closest -D \"ref\" -a $input_variants -b $temp_pwm_bed_sorted -g $CHROMSIZES > $data_closest";
+unlink $input_variants if($INTERVALS);
 #from here I want two files
 #one, pure counts, to build histograms in R
 #two, x,y pairs, to build point plots in R
@@ -204,13 +203,13 @@ unlink $data_closest;
 #line plot
 open ($outstream,  q{>}, $Rscript_counts) or die("Unable to open $Rscript_counts : $!");
 print $outstream "data <- read.table(\"$data_counts\",sep=\"\\t\")" . "\n";
-print $outstream "sub_dataL <- subset(data, V2 >= -$THRS_DIST_LARGE & V2 <= $THRS_DIST_LARGE, select=c(V1,V2))" . "\n";
+#print $outstream "sub_dataL <- subset(data, V2 >= -$THRS_DIST_LARGE & V2 <= $THRS_DIST_LARGE, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_all\")" . "\n";
-print $outstream "plot(sub_dataL\$V2,log10(sub_dataL\$V1), type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-1Mb)\")" . "\n";
+print $outstream "plot(data\$V2,log10(data\$V1), type=\"p\", cex=.5, xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id\")" . "\n";
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,log10(sub_data\$V1), type=\"p\", cex=.3, xlim=c(-$THRS_DIST,$THRS_DIST), xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
+print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlim=c(-$THRS_DIST,$THRS_DIST), xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
