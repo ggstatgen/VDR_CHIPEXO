@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use File::Basename;
 use Getopt::Long;
+use Data::Dumper;
 #use Algorithm::Combinatorics qw(combinations);
 
 #example use of combinations
@@ -32,6 +33,7 @@ my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 my $IN_VDRBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed';
 my $IN_VDRrBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_VDR_rBVs_hg19.bed';
 my $IN_VDRBV_VCF = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf';
+my $IN_VDRrBV_VCF = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf';
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 my $INPUT_PSCANCHIP_RIS_DIR;
 my $identifier;
@@ -39,6 +41,7 @@ my $motif_name;
 my $INPUT_VAR_BINARY;
 my $MIN_SCORE;
 my $input_variants;
+my $input_variants_vcf;
 
 GetOptions(
         'data=s'   		=>\$INPUT_PSCANCHIP_RIS_DIR,        
@@ -57,8 +60,10 @@ unless($INPUT_PSCANCHIP_RIS_DIR && $INPUT_VAR_BINARY){
 #binary arguments
 if($INPUT_VAR_BINARY eq 'BV'){
 	$input_variants = $IN_VDRBV_BED;
+	$input_variants_vcf = $IN_VDRBV_VCF;
 }elsif($INPUT_VAR_BINARY eq 'rBV'){
 	$input_variants = $IN_VDRrBV_BED;
+	$input_variants_vcf = $IN_VDRrBV_VCF;
 }else{
 	print STDERR "ERROR: field -v not recognised: $INPUT_VAR_BINARY. Aborting.\n";
 	exit -1;
@@ -92,19 +97,19 @@ close $instream;
 ####
 #1 slurp vcf VDR-BVs indexed by coordinate (needed for question 2)
 ####
-my %VDRBV_library;
-open ($instream,  q{<}, $IN_VDRBV_VCF) or die("Unable to open $IN_VDRBV_VCF : $!");
-while(<$instream>){
-	chomp;
-	next if($_ =~ /^\#/);
-	next if($_ eq '');
-	my @line = split("\t",$_);
-	my $chr = shift @line;
-	my $pos = shift @line;
-	my $line = join("\t", @line);
-	my $coord = $chr . '-' . $pos;
-	$VDRBV_library{$coord} = $line;
-}
+#my %VDRBV_library;
+#open ($instream,  q{<}, $IN_VDRBV_VCF) or die("Unable to open $IN_VDRBV_VCF : $!");
+#while(<$instream>){
+#	chomp;
+#	next if($_ =~ /^\#/);
+#	next if($_ eq '');
+#	my @line = split("\t",$_);
+#	my $chr = shift @line;
+#	my $pos = shift @line;
+#	my $line = join("\t", @line);
+#	my $coord = $chr . '-' . $pos;
+#	$VDRBV_library{$coord}{'VCFDATA'} = $line;
+#}
 
 
 ####################
@@ -152,41 +157,45 @@ foreach my $FILE (@files){
 		}
 		my $this_motif_interval = $chr . "\t" . $motif_start . "\t" . $motif_end;
 		$pwm_intervals{$full_motif_id}{$this_motif_interval} = 1;		
-		
 		#the following will run through all VDR-BVs and check if any of them is in this PWM interval. If so, the corresponding entry is 
 		#augmented with a flag and with the name of the pwm hit
-		flag_VDRBVs_in_PWM_interval($full_motif_id, $chr, $motif_start, $motif_end, \%VDRBV_library);
+		#flag_VDRBVs_in_PWM_interval($full_motif_id, $chr, $motif_start, $motif_end, \%VDRBV_library);
 	}
 	close $instream;
 }
 
+
+#print Dumper(\%VDRBV_library);
+#exit;
 ####
 #3 print out a tsv file of those vdr-bv falling in at least 1 DISTINCT PWM model
 ####
-my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
-open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
-print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
-foreach my $item (sort keys %VDRBV_library){
-	my @pwmlist; #list of comma separated PWMs that are hit
-	my $pwmstring;
-	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}}){ push (@pwmlist,$pwm_hit);  }
-	$pwmstring = join(",", @pwmlist);
-	next if(!$pwmstring || ($pwmstring = '') );
-	
-	my ($chr, $pos) = split('-', $item);
-	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item} . "\t" . $pwmstring;
-	print $outstream $string, "\n";
-}
-close $outstream;
+#my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+#open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
+#print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
+#foreach my $item (keys %VDRBV_library){
+#	my @pwmlist; #list of comma separated PWMs that are hit
+#	my $pwmstring;
+#	foreach my $pwm_hit (sort keys %{$VDRBV_library{$item}{'PWM'}}){ push (@pwmlist,$pwm_hit);  }
+#	$pwmstring = join(",", @pwmlist);
+#	next if(!$pwmstring || ($pwmstring = '') );
+#	
+#	my ($chr, $pos) = split('-', $item);
+#	my $string = $chr . "\t" . $pos . "\t" . $VDRBV_library{$item}{'VCFDATA'} . "\t" . $pwmstring;
+#	print $outstream $string, "\n";
+#}
+#close $outstream;
 
 ########
 #4 for each PWM model, save one png R file showing a histogram with the number of VDR-BV hitting each model.
 ########
 unless($MIN_SCORE) { $MIN_SCORE = 'NA'; }
 #make a small histogram for each pwm showing the number of VDR-BVs per motif interval
+my %VDRBV_intersections;
 foreach my $this_pwm (sort keys %pwm_intervals){
 	print $this_pwm, "\n";
 	my $temp_pwm_bed   = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.bed';
+	my $temp_pwm_bed_o = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '_out.bed';
 	my $temp_Rcode     = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.R';
 	my $temp_Rdata     = $INPUT_PSCANCHIP_RIS_DIR . '/TEMP_' . $this_pwm . '.Rdata';	
 	my $out_Rplot      = $INPUT_PSCANCHIP_RIS_DIR . '/plot_vdrbvhist_' . $this_pwm . '_' .  $INPUT_VAR_BINARY . '_minPWMscore_' . $MIN_SCORE . '.png';
@@ -195,14 +204,23 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 		print $outstream $this_pwm_interval, "\n";
 	}
 	close $outstream;
+	system "$BEDTOOLS intersect -a $input_variants_vcf -b  $temp_pwm_bed > $temp_pwm_bed_o";
 	system "$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort > $temp_Rdata";
-	
-	#my $hist = `$BEDTOOLS intersect -c -a $temp_pwm_bed -b $input_variants | cut -f 4 | sort | uniq -c`;
-	#chomp $hist;
-	#$hist =~ s/\n/\t/g;
-	#$hist = $this_pwm . "\t" . $hist;
-	#$tsv_line{$hist} = 1;
-	
+
+	#process vcf lines and save in structure
+	open (my $instream,  q{<}, $temp_pwm_bed_o) or die("Unable to open $temp_pwm_bed_o : $!");
+	while(<$instream>){
+		chomp $_;
+		my @line = split("\t",$_);
+		my $chr = shift @line;
+		my $pos = shift @line;
+		my $line = join("\t", @line);
+		my $coord = $chr . '-' . $pos;
+		$VDRBV_intersections{$coord}{$this_pwm} = 1;
+	}
+	close $instream;
+
+
 	#write R code 
 	open ($outstream,  q{>}, $temp_Rcode) or die("Unable to open $temp_Rcode : $!");
 	print $outstream "data <- read.table(\"$temp_Rdata\",sep=\"\\t\")" . "\n";
@@ -218,7 +236,17 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 	unlink $temp_pwm_bed;
 	unlink $temp_Rdata;
 	unlink $temp_Rcode;
+	unlink $temp_pwm_bed_o;
 }
+
+
+foreach my $item (sort keys %VDRBV_intersections){
+	foreach my $pwm (keys %{ $VDRBV_intersections{$item} }){
+		print $item, "\t", $pwm, "\n";
+	}
+}
+
+
 
 #print output
 #my $out_table = $INPUT_PSCANCHIP_RIS_DIR . '/TABLE_vdrbv_cardinality.tsv';
@@ -239,8 +267,8 @@ sub flag_VDRBVs_in_PWM_interval{
 		my ($vdrbv_chr, $vdrbv_pos) = split('-', $item);
 		
 		if( ($thischr eq $vdrbv_chr) && ($vdrbv_pos >= $int_start) && ($vdrbv_pos <= $int_end ) ){
-			$$vdrbv_hash{$item}{$this_pwm_name} = 1;
-			return;
+			$$vdrbv_hash{$item}->{"PWM"}->{$this_pwm_name} = 1;
+			#print Dumper($$vdrbv_hash{$item});
 		}
 	}
 	return;
