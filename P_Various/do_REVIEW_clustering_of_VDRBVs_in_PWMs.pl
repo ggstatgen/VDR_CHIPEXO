@@ -209,9 +209,10 @@ my $temp_out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hitti
 my $out_Rdata    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.Rdata';
 my $out_Rcode    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.R';
 my $out_Rplot    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.png';
+my $out_tsv_nH   = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . 'nH.tsv';
 my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+my $HEADER = "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\n";;
 open (my $outstream,  q{>}, $temp_out_tsv) or die("Unable to open $temp_out_tsv : $!");
-print $outstream "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\n";
 open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
 while(<$instream>){
 	chomp;
@@ -248,22 +249,28 @@ close $instream;
 close $outstream;
 
 #sort and get unique out.
-system "cat $temp_out_tsv | sort -k1,1V -k2,2n | uniq > $out_tsv";
+system "cat $temp_out_tsv | sort -k1,1V -k2,2n | uniq > $out_tsv_nH";
 unlink $temp_out_tsv;
 
-#Write R histogram
-system "cat $out_tsv | cut -f 7 > $out_Rdata";
+#Write R bar plots
+system "cat $out_tsv_nH | cut -f 7 | sort > $out_Rdata";
 open ($outstream,  q{>}, $out_Rcode) or die("Unable to open $out_Rcode : $!");
 print $outstream "data <- read.table(\"$out_Rdata\",sep=\"\\t\")" . "\n";
+print $outstream "data_c <- table(data)" . "\n";
 print $outstream "$PLOT_EXT(file=\"$out_Rplot\")" . "\n";
-print $outstream "hist(data\$V1, xlab=\"Number of unique PWM hit by VDR-$INPUT_VAR_BINARY\", ylab=\"Counts\", main=\"Distribution of counts by number of unique PWMs being hit\")" . "\n";
+print $outstream "bplt <- barplot(data_c, xlab=\"\#PWM models hit by $INPUT_VAR_BINARY\", ylab=\"\#$INPUT_VAR_BINARY\", width=1, main=\"\#$INPUT_VAR_BINARY by \#PWM models hit(t=$MIN_SCORE)\")" . "\n";
+print $outstream "text(x=bplt, y=data_c, labels=as.character(data_c), pos=3, cex = 0.8, col = \"red\", xpd=TRUE)" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
-system "$RSCRIPT $out_Rcode";
 
+system "$RSCRIPT $out_Rcode";
+system "sed 1i\"$HEADER\" $out_tsv_nH > $out_tsv";
+
+unlink $out_tsv_nH;
 unlink $temp_out_tsv;
 unlink $out_Rcode;
 unlink $out_Rdata;
+
 
 
 #subs-------------------------------------------------------------------
