@@ -217,7 +217,7 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 my $out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
 open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
 print $outstream "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tPWM_HIT\n";
-foreach my $vdr_coord (sort  { $a <=> $b } keys %VDRBV_intersections){
+foreach my $vdr_coord (sort keys %VDRBV_intersections){
 	my @pwmstring; my $pwmlist;
 	foreach my $pwm (keys %{ $VDRBV_intersections{$vdr_coord} }){ push(@pwmstring,$pwm); }
 	$pwmlist = join(',',@pwmstring);
