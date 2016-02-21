@@ -4,10 +4,14 @@ use warnings;
 use File::Basename;
 use Getopt::Long;
 
+#21/2/2106
+#Provide the option of removing VDR-BVs which fall into GOOD RXRA::VDR motifs, first.
+
 #07/2/2016
 #I want to build a histogram showing the distribution of variant in the VDR:RXR motif and around it.
 #I can use bedtools closest to assign every variant to its closest VDR:RXR motif and then spit the R file
 #The problems with the interval in the ris are solved similarly to what I did in 'do_funseq_adapt_motiffile.pl'
+
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
@@ -18,6 +22,7 @@ my $IN_VDRrBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamp
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 
 my $input_pscanchip_ris;
+my $temp_vars;
 my $input_variants;
 my $INPUT_VAR_BINARY;
 my $identifier;
@@ -26,6 +31,7 @@ my $THRS_DIST;
 my $PLOT_EXT;
 my $MIN_SCORE;
 my $THRS_DIST_LARGE = 1000000; #In order to centre the large plots, I arbitrarily set an interval of +-1MB for visualisation
+my $INTERVALS; #do not plot VDR-BVs falling in these bed intervals
 
 
 GetOptions(
@@ -33,15 +39,17 @@ GetOptions(
 		'v=s'		=>\$INPUT_VAR_BINARY,
         't=i'		=>\$THRS_DIST,   
         'p=s'		=>\$PLOT_EXT,
-        's=f'		=>\$MIN_SCORE            
+        's=f'		=>\$MIN_SCORE,
+        'bl=s'      =>\$INTERVALS    
 );
 
-my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpeg|png> (opt)-s=<MINSCORE>\n" .
+my $USAGE = "\nUSAGE: $0 -m=<INFILE_PSCANCHIP> -v=<BV|rBV> -t=<THRS> -p=<pdf|svg|jpeg|png> (opt)-s=<MINSCORE> (opt)-bl=<INTERVALS_BED>\n" .
 			"<INFILE_PSCANCHIP> ris file from PscanChip\n" .
 			"<BV|rBV> if BV, all VDRBV will be used; if rBV, only VDR-rBV will be used\n" .
 			"<THRS> Distance threshold cutoff for plot\n" .
 			"<PLOT> type of R output plot desired\n" .
-			"optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)\n"; 
+			"optional <MINSCORE> lower threshold on score (eg 0.8) (default:none)\n" . 
+			"optional <INTERVALS_BED> VDR-BVs hitting these intervals will not be considered (eg good RXRA::VDR intervals)\n";
 			
 unless($input_pscanchip_ris && $INPUT_VAR_BINARY && $THRS_DIST && $PLOT_EXT){
 	print $USAGE;
@@ -49,9 +57,9 @@ unless($input_pscanchip_ris && $INPUT_VAR_BINARY && $THRS_DIST && $PLOT_EXT){
 }
 #binary arguments
 if($INPUT_VAR_BINARY eq 'BV'){
-	$input_variants = $IN_VDRBV_BED;
+	$temp_vars = $IN_VDRBV_BED;
 }elsif($INPUT_VAR_BINARY eq 'rBV'){
-	$input_variants = $IN_VDRrBV_BED;
+	$temp_vars = $IN_VDRrBV_BED;
 }else{
 	print STDERR "ERROR: field -v not recognised: $INPUT_VAR_BINARY. Aborting.\n";
 	exit -1;
@@ -60,7 +68,16 @@ unless($PLOT_EXT eq 'jpeg' || $PLOT_EXT eq 'png' || $PLOT_EXT eq 'svg' || $PLOT_
 	print STDERR "ERROR: field -p not recognised: $PLOT_EXT. Aborting.\n";
 	exit -1;
 }
+
 print STDERR "THRESHOLDING ON SCORE: $MIN_SCORE\n" if($MIN_SCORE);
+if($INTERVALS){
+	print STDERR "Getting rid of input variants intersecting intervals in $INTERVALS\n" if($INTERVALS);
+	system "$BEDTOOLS intersect -v -a $temp_vars -b $INTERVALS > $input_variants";
+}else{
+	$input_variants = $temp_vars;
+}
+#unlink $temp_vars;
+exit;
 
 $INPUT_VAR_BINARY = 'VDR-' . $INPUT_VAR_BINARY;
 my($basename, $directory) = fileparse($input_pscanchip_ris);
@@ -85,10 +102,22 @@ my $data_histogram          = $directory . 'R_' . $this_motif_id  . '_histogram.
 my $Rscript_counts           = $directory . 'R_' .                     $this_motif_id  . '_counts.R';
 my $Rscript_hist             = $directory . 'R_' . $this_motif_id  . '_hist.R';
 
-my $Rscript_counts_plot_all  = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_all.'                       . $PLOT_EXT;
-my $Rscript_counts_plot_sub  = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_dthrs_' . $THRS_DIST .  '.' . $PLOT_EXT;
-my $Rscript_hist_plot_all    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_all.'                         . $PLOT_EXT;
-my $Rscript_hist_plot_sub    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_dthrs_'   . $THRS_DIST .  '.' . $PLOT_EXT;
+my $Rscript_counts_plot_all;
+my $Rscript_counts_plot_sub;
+my $Rscript_hist_plot_all;
+my $Rscript_hist_plot_sub;
+
+if($INTERVALS){
+	$Rscript_counts_plot_all  = $directory . 'R_subsetbed_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_all.'                       . $PLOT_EXT;
+	$Rscript_counts_plot_sub  = $directory . 'R_subsetbed_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_dthrs_' . $THRS_DIST .  '.' . $PLOT_EXT;
+	$Rscript_hist_plot_all    = $directory . 'R_subsetbed_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_all.'                         . $PLOT_EXT;
+	$Rscript_hist_plot_sub    = $directory . 'R_subsetbed_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_dthrs_'   . $THRS_DIST .  '.' . $PLOT_EXT;	
+}else{
+	$Rscript_counts_plot_all  = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_all.'                       . $PLOT_EXT;
+	$Rscript_counts_plot_sub  = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_counts_dthrs_' . $THRS_DIST .  '.' . $PLOT_EXT;
+	$Rscript_hist_plot_all    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_all.'                         . $PLOT_EXT;
+	$Rscript_hist_plot_sub    = $directory . 'R_' . $INPUT_VAR_BINARY . '_' . $this_motif_id . '_hist_dthrs_'   . $THRS_DIST .  '.' . $PLOT_EXT;
+}
 
 #######
 #1 get the REAL motif length from the encode representations of the motif
@@ -203,9 +232,6 @@ unlink $data_counts;
 unlink $data_histogram;
 unlink $Rscript_counts;
 unlink $Rscript_hist;
-
-
-
 
 #bin_variants($data_histogram, \%variant_binning);
 #print "BIN\tCOUNT\n";

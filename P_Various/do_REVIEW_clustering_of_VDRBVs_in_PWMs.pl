@@ -211,7 +211,7 @@ my $out_Rcode    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hitti
 my $out_Rplot    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.png';
 my $out_tsv_nH   = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . 'nH.tsv';
 my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
-my $HEADER = "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\n";;
+my $HEADER = "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\tCTCF_PRESENT\tZnf423_PRESENT\n";;
 open (my $outstream,  q{>}, $temp_out_tsv) or die("Unable to open $temp_out_tsv : $!");
 open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
 while(<$instream>){
@@ -220,12 +220,17 @@ while(<$instream>){
 	next if($_ eq '');
 	my @line = split("\t",$_);
 	my $coord = $line[0] . '-' . $line[1];
-	my @pwmstring; my $pwmlist = ''; my $counter = 0; my $VDR_DR3_FOUND = '';
+	my @pwmstring; my $pwmlist = ''; my $counter = 0; 
+	my $VDR_DR3_FOUND = '';
+	my $CTFC_FOUND = '';
+	my $ZNF423_FOUND = '';
 	
 	#now search the catalogue of intersections with this line
 	if($VDRBV_intersections{$coord}){
 		foreach my $pwm (keys %{ $VDRBV_intersections{$coord} }){
 			if($pwm =~ /MA0074.1/){ $VDR_DR3_FOUND = 'Y'; } 
+			if($pwm =~ /MA0116.1/){ $ZNF423_FOUND = 'Y'; }
+			if($pwm =~ /MA0139.1/){ $CTFC_FOUND = 'Y'; }					
 			push(@pwmstring,$pwm);
 			$counter++; 
 		}
@@ -242,7 +247,9 @@ while(<$instream>){
 				$gene_info . "\t" .
 				$counter   . "\t" .
 				$pwmlist   . "\t" . 
-				$VDR_DR3_FOUND;
+				$VDR_DR3_FOUND . "\t" .
+				$CTFC_FOUND    . "\t" .
+				$ZNF423_FOUND;	
 	print $outstream $line, "\n";
 }
 close $instream;
