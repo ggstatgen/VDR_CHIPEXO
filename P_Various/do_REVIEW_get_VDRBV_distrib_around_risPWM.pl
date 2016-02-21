@@ -209,7 +209,7 @@ print $outstream "plot(data\$V2,log10(data\$V1), type=\"p\", cex=.5, xlab=\"Dist
 print $outstream "dev.off()" . "\n";
 print $outstream "sub_data <- subset(data, V2 >= -$THRS_DIST & V2 <= $THRS_DIST, select=c(V1,V2))" . "\n";
 print $outstream "$PLOT_EXT(file=\"$Rscript_counts_plot_sub\")" . "\n";
-print $outstream "plot(sub_data\$V2,sub_data\$V1, type=\"p\", cex=.3, xlim=c(-$THRS_DIST,$THRS_DIST), xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
+print $outstream "plot(sub_data\$V2,log10(sub_data\$V1), type=\"p\", cex=.3, xlim=c(-$THRS_DIST,$THRS_DIST), xlab=\"Distance from meta-motif PWM (bp)\", ylab=\"log_10(\#Observations)\", main=\"$INPUT_VAR_BINARY profile around $full_motif_id (d_thrs=+/-$THRS_DIST)\")" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
