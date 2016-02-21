@@ -41,6 +41,7 @@ my $INPUT_VAR_BINARY;
 my $MIN_SCORE;
 my $input_variants;
 my $input_variants_vcf;
+my $PLOT_EXT = 'png';
 
 GetOptions(
         'data=s'   		=>\$INPUT_PSCANCHIP_RIS_DIR,        
@@ -204,8 +205,12 @@ foreach my $this_pwm (sort keys %pwm_intervals){
 #####
 #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO
 #I want chrom, pos, id, ref, alt, INFO(gene) + new ones (n.pwms hit?which pwms?is vdr one of them?)
-my $out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
-open (my $outstream,  q{>}, $out_tsv) or die("Unable to open $out_tsv : $!");
+my $temp_out_tsv = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '_temp.data';
+my $out_Rdata    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.Rdata';
+my $out_Rcode    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.R';
+my $out_Rplot    = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.png';
+my $out_tsv      = $INPUT_PSCANCHIP_RIS_DIR . '/' .  $INPUT_VAR_BINARY . '_hittingPWMs_minPWMscore_' . $MIN_SCORE . '.tsv';
+open (my $outstream,  q{>}, $temp_out_tsv) or die("Unable to open $temp_out_tsv : $!");
 print $outstream "#CHROM\tPOS\tID\tREF\tALT\tGENE_INFO\tN_PWM_HIT\tPWM_IDs\tVDR_DR3_PRESENT\n";
 open ($instream,  q{<}, $input_variants_vcf) or die("Unable to open $input_variants_vcf : $!");
 while(<$instream>){
@@ -242,11 +247,26 @@ while(<$instream>){
 close $instream;
 close $outstream;
 
-#sort and get unique out
+#sort and get unique out.
+system "cat $temp_out_tsv | sort -k1,1V -k2,2n | uniq > $out_tsv";
+unlink $temp_out_tsv;
 
-#############
-#subs
-#############
+#Write R histogram
+system "cat $out_tsv | cut -f 7 > $out_Rdata";
+open ($outstream,  q{>}, $out_Rcode) or die("Unable to open $out_Rcode : $!");
+print $outstream "data <- read.table(\"$out_Rdata\",sep=\"\\t\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$out_Rplot\")" . "\n";
+print $outstream "hist(data\$V1, xlab=\"Number of unique PWM hit by VDR-$INPUT_VAR_BINARY\", ylab=\"Counts\", main=\"Distribution of counts by number of unique PWMs being hit\")" . "\n";
+print $outstream "dev.off()" . "\n";
+close $outstream;
+system "$RSCRIPT $out_Rcode";
+
+unlink $temp_out_tsv;
+unlink $out_Rcode;
+unlink $out_Rdata;
+
+
+#subs-------------------------------------------------------------------
 #only keep GENE info, if available, from the funseq2 annotation
 #SAMPLE=interestingHets_NA06986_EBLfiltered_hg19;GERP=1.01;CDS=No;HUB=EXOSC7:PHOS(0.947)PPI(0.739);GENE=EXOSC7(Intron);NCDS=0.844214221203786
 sub get_gene_info{
