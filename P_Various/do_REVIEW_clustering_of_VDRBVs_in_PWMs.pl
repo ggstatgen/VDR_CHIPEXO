@@ -4,7 +4,6 @@ use warnings;
 use File::Basename;
 use Getopt::Long;
 use Data::Dumper;
-#use Algorithm::Combinatorics qw(combinations);
 
 #example use of combinations
 #chdir $dir;
