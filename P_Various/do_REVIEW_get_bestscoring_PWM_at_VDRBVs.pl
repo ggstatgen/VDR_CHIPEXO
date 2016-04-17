@@ -88,45 +88,35 @@ print STDERR "The length of the motif: $full_motif_id according to the JASPAR PW
 #2 write bed of ris intervals
 my $tmp_ris_bed          = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
 my $tmp_intersect_bed    = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
-my $tmp_no_intersect_bed = $INPUT_RIS_DIR . '/TMP_nointersect_' . $motif_string . '.bed';
+my $VDRBV_no_RXRVDR_intersect = $INPUT_RIS_DIR . '/TMP_nointersect_' . $motif_string . '.bed';
 write_ris_to_bed_file($RXR_VDR_PATH, $tmp_ris_bed, $motif_length);
 system "$BEDTOOLS intersect -wo -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2\"\t\"\$12\"\t\"\$13}' > $tmp_intersect_bed";
-system "$BEDTOOLS intersect -v -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2}\'> $tmp_no_intersect_bed";
-exit;
-#from those that intersect, fill the results table
-#those that dont intersect them with the other ris files
+system "$BEDTOOLS intersect -v -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2}\'> $VDRBV_no_RXRVDR_intersect";
 
-#OLD
-#2. Fill array of pwm intervals from ris------------------------------------------------------
-#my @ris_array = get_ris_intervals($RXR_VDR_PATH, $motif_length);
-#3. Check the vdr-bvs against the RXR:VDR ris:------------------------------------------------
-#-for each line in bed, see if vdrbv is in interval.
-#If so, remove it from main hash and place in result hash
-#print "Working on $full_motif_id:\n";
-#foreach my $item (keys %VDRBV_coords){
-#	my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($item, @ris_array);
-#	if ($best_scoring_intersecting_pwm){
-#		print STDERR '.';
-#		my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
-#		#TODO you might want to save more than the score.
-#		$RESULTS{$item}{$motif_string} = $score;
-#		delete($VDRBV_coords{$item});
-#	}
-#}
-#print "\n";
-#print "Initial VDR-BVs: $VDRBV_initial\n";
-#my $VDRBV_left = keys %VDRBV_coords;
-#print "VDR-BV left after assigning to $full_motif_id at min score thrs: $MIN_SCORE: $VDRBV_left\n";
+open (my $instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
+while(<$instream>){
+	chomp;
+	next if($_ eq '');
+	
+	#get coords
+	my ($chr, $pos, $score) = (split /\t/)[0,2,4];
+	unless($chr =~ /^chr/){
+		$chr = 'chr' . $chr;
+	}
+	my $coord = $chr . '-' . $pos;
+	$RESULTS{$coord}{$motif_string} = $score;
+}
+close $instream;
+unlink $tmp_ris_bed;
+unlink $tmp_intersect_bed;
 
-#
+
 #ALL PWM RIS----------
-#
 #Here I will need an intermediate hash, with
 #pos -> pmw_id1 -> score1
 #   |
 #   |_> pwm_id2 -> score2
 #For each of these positions, I will have to choose the best scoring pwm_id. Also, if two or more have the same score, I pick the largest PWM
-
 #1st pass: label each vdrbv with the best instanes of all the pwm(s) they fall in
 my %results_allpwms;
 chdir $INPUT_RIS_DIR;
@@ -138,24 +128,35 @@ foreach my $RIS_FILE (@files){
 	#1. Build pwm ID------------------------------------------------------------------------------
 	my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RIS_FILE);
 	print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
-	#2. Fill array of pwm intervals from ris------------------------------------------------------
-	my @ris_array = get_ris_intervals($RIS_FILE_PATH, $motif_length);
+	
+	#2. Write ris into bed------------------------------------------------------------------------
+	my $tmp_ris_bed          = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
+	my $tmp_intersect_bed    = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
+	write_ris_to_bed_file($RIS_FILE_PATH, $tmp_ris_bed, $motif_length);
+	
 	#3. Check the vdr-bvs against the ris:--------------------------------------------------------
 	print "Working on $full_motif_id:\n";
-	foreach my $vdrbv (keys %VDRBV_coords){
-		my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($vdrbv, @ris_array);
-		if ($best_scoring_intersecting_pwm){
-			print STDERR '.';
-			my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
-			$results_allpwms{$vdrbv}{$motif_string}{'SCORE'}      = $score;
-			$results_allpwms{$vdrbv}{$motif_string}{'PWM_LENGTH'} = $motif_length;
-			delete($VDRBV_coords{$vdrbv});
+	system "$BEDTOOLS intersect -wo -a $VDRBV_no_RXRVDR_intersect -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$9\"\t\"\$10}' > $tmp_intersect_bed";
+	#4 save those with intersections in temporary hash
+	open (my $instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
+	while(<$instream>){
+		chomp;
+		next if($_ eq '');
+		#get coords
+		my ($chr, $pos, $score) = (split /\t/)[0,2,4];
+		unless($chr =~ /^chr/){
+			$chr = 'chr' . $chr;
 		}
+		my $vdr_bv_coord = $chr . '-' . $pos;
+		$results_allpwms{$vdr_bv_coord}{$motif_string}{'SCORE'}      = $score;
+		$results_allpwms{$vdr_bv_coord}{$motif_string}{'PWM_LENGTH'} = $motif_length;
 	}
-	print "\n";		
+	close $instream;
+	unlink $tmp_ris_bed;
+	unlink $tmp_intersect_bed;
 }
-
-
+	
+#2nd pass--
 #for every position, choose one pwm
 #criteria:
 #if 1 pwm, keep it
@@ -175,7 +176,6 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 	my $candidate_score = 0;
 	my $candidate_length = 0;
 	my $candidate_pwm = '';
-	
 	foreach my $this_pwm (keys %{$results_allpwms{$vdrbv_pos}}){
 		my $this_score = $results_allpwms{$vdrbv_pos}{'SCORE'};
 		my $this_length =  $results_allpwms{$vdrbv_pos}{'PWM_LENGTH'};
@@ -198,12 +198,17 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 	$RESULTS{$vdrbv_pos}{$candidate_pwm} = $candidate_score;
 }
 
-	#foreach my $motif_pwm (keys %{$results_allpwms{$vdrbv_coords}}){
-#		print $counter, ":\t", $vdrbv_coords, "\t", $motif_pwm, "\t", $results_allpwms{$vdrbv_coords}{$motif_pwm}, "\n";
-	#}
-
-
-
+$MIN_SCORE = 'NA' unless($MIN_SCORE);
+my $output_file = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.tsv';
+open (my $outstream,  q{>}, $output_file) or die("Unable to open $output_file : $!");
+print $outstream "CHR\tPOS\tASSIGNED_PWM\tSCORE\n";
+foreach my $vdrbv_coords (keys %RESULTS){
+	my ($chr, $pos) = split('-',$vdrbv_coords);
+	foreach my $pwm_id (keys %{$RESULTS{$vdrbv_coords}}){
+		print $outstream $chr, "\t", $pos, "\t", $pwm_id, "\t", $RESULTS{$vdrbv_coords}{$pwm_id}, "\n";
+	}
+}
+close $outstream;
 
 
 
@@ -367,3 +372,41 @@ sub check_vdrbv_intersects_pwm_interval{
 	}
 	return undef;
 }
+
+#OLD
+#2. Fill array of pwm intervals from ris------------------------------------------------------
+#my @ris_array = get_ris_intervals($RXR_VDR_PATH, $motif_length);
+#3. Check the vdr-bvs against the RXR:VDR ris:------------------------------------------------
+#-for each line in bed, see if vdrbv is in interval.
+#If so, remove it from main hash and place in result hash
+#print "Working on $full_motif_id:\n";
+#foreach my $item (keys %VDRBV_coords){
+#	my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($item, @ris_array);
+#	if ($best_scoring_intersecting_pwm){
+#		print STDERR '.';
+#		my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
+#		#TODO you might want to save more than the score.
+#		$RESULTS{$item}{$motif_string} = $score;
+#		delete($VDRBV_coords{$item});
+#	}
+#}
+#print "\n";
+#print "Initial VDR-BVs: $VDRBV_initial\n";
+#my $VDRBV_left = keys %VDRBV_coords;
+#print "VDR-BV left after assigning to $full_motif_id at min score thrs: $MIN_SCORE: $VDRBV_left\n";
+
+#old
+	##2. Fill array of pwm intervals from ris------------------------------------------------------
+	#my @ris_array = get_ris_intervals($RIS_FILE_PATH, $motif_length);	
+#	foreach my $vdrbv (keys %VDRBV_coords){
+#		my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($vdrbv, @ris_array);
+#		if ($best_scoring_intersecting_pwm){
+#			print STDERR '.';
+#			my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
+#			$results_allpwms{$vdrbv}{$motif_string}{'SCORE'}      = $score;
+#			$results_allpwms{$vdrbv}{$motif_string}{'PWM_LENGTH'} = $motif_length;
+#			delete($VDRBV_coords{$vdrbv});
+#		}
+#	}
+#	print "\n";		
+#}
