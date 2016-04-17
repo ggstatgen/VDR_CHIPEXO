@@ -28,13 +28,13 @@ my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 #my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 #my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes';
 
-my $TEMP_PATH = "C:/Users/Giuseppe/Desktop/REVIEW_temp/DATA/";
-my $IN_VDRBV = $TEMP_PATH . "Output_noDBRECUR.vcf";
-my $PWM_FILE = $TEMP_PATH . "Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
+#my $TEMP_PATH = "C:/Users/Giuseppe/Desktop/REVIEW_temp/DATA/";
+#my $IN_VDRBV = $TEMP_PATH . "Output_noDBRECUR.vcf";
+#my $PWM_FILE = $TEMP_PATH . "Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 
-#my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
 #my $IN_VDRBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed'; 
-#my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
+my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 
 my $INPUT_RIS_DIR;
 my $MIN_SCORE;
@@ -57,13 +57,11 @@ GetOptions(
         's=f'		=>\$MIN_SCORE,   
 );
 #temp
-#$INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
-$INPUT_RIS_DIR = $TEMP_PATH . 'RIS';
-$MIN_SCORE = 0.9;
+$INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
+#$INPUT_RIS_DIR = $TEMP_PATH . 'RIS';
+$MIN_SCORE = 0.8;
 my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
 my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
-
-
 
 
 my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
@@ -91,8 +89,10 @@ print STDERR "The length of the motif: $full_motif_id according to the JASPAR PW
 my $tmp_ris_bed       = $INPUT_RIS_DIR . '/TMP_from_ris_'  . $motif_string . '.bed';
 my $tmp_intersect_bed = $INPUT_RIS_DIR . '/TMP_intersect_' . $motif_string . '.bed'; 
 write_ris_to_bed_file($RXR_VDR_PATH, $tmp_ris_bed, $motif_length);
-exit;
 system "$BEDTOOLS intersect -c -a $IN_VDRBV -b $tmp_ris_bed > $tmp_intersect_bed";
+#in column 9 there is either 1 or zero
+
+#
 #bedtools intersect
 #filter those which intersect and put in RESULT
 #output bed of those that don't intersect
@@ -313,9 +313,9 @@ sub write_ris_to_bed_file{
 	}
 	close $instream;	
 	
-	open (my $outstream, q{<}, $out_file) or die("Unable to open $out_file : $!");
+	open (my $outstream, q{>}, $out_file) or die("Unable to open $out_file : $!");
 	foreach my $item (keys %hash){ 
-		print $item, "\n"; 
+		print $outstream $item, "\n"; 
 	}
 	close $outstream;
 	return;
