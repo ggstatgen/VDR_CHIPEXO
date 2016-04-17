@@ -47,6 +47,8 @@ GetOptions(
 #temp
 $INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
 my $RXR_VDR_RIS = $INPUT_RIS_DIR . "/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
+#$MIN_SCORE = 0.8;
+
 
 my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
 			"<VDRBV_RIS_DIR> ris file from PscanChip\n" .
@@ -157,19 +159,20 @@ close $instream;
 #system "cat $temp_ris_bed | sort -k4nr > $temp_ris_bed_score_srt";
 #needs to be checked here
 
+
 my %RESULTS;
+print "Working on $full_motif_id:\n";
 foreach my $item (keys %VDRBV_coords){
 	my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($item);
 	if ($best_scoring_intersecting_pwm){
+		print STDERR '.';
 		my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
 		#TODO you might want to save more than the score.
 		$RESULTS{$item}{$motif_string} = $score;
 		delete($VDRBV_coords{$item});
-		next;
-	}else{
-		next;
 	}
 }
+print "\n";
 #do the above for all the other ris: for each ris get the best scoring intersecting pwm, if any, and then outside the ris file loop choose
 #the global one with the highest score and fill results.
 
@@ -180,9 +183,11 @@ unlink $temp_ris_bed;
 unlink $temp_ris_bed_score_srt;
 
 #print output to see it
+my $counter = 1;
 foreach my $vdrbv_coords (keys %RESULTS){
 	foreach my $motif_pwm (keys %{$RESULTS{$vdrbv_coords}}){
-		print $vdrbv_coords, "\t", $motif_pwm, "\t", $RESULTS{$vdrbv_coords}{$motif_pwm}, "\n";
+		print $counter, ":\t", $vdrbv_coords, "\t", $motif_pwm, "\t", $RESULTS{$vdrbv_coords}{$motif_pwm}, "\n";
+		$counter++;
 	}
 }
 
@@ -199,9 +204,10 @@ sub check_vdrbv_intersects_pwm_interval{
 	my ($vdrbv_chr,$vdrbv_pos) = split("-", $vdrbv_coords);
 	#now search the array until you find an intersection
 	foreach my $pwm_interval (@RIS_ARRAY){
-		my ($pwm_chr, $pwm_start, $pwm_end) = split("\t", $pwm_interval);
+		my ($pwm_chr, $pwm_start, $pwm_end, $score) = split("\t", $pwm_interval);
 		if( ($pwm_chr eq $vdrbv_chr) && ($vdrbv_pos >= $pwm_start) && ($vdrbv_pos <= $pwm_end) ) {
-			return $_;
+			#print $pwm_interval, "\t:", $vdrbv_coords, "\n";
+			return $pwm_interval;
 		}		
 	}
 	return undef;
