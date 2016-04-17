@@ -44,12 +44,9 @@ GetOptions(
         'm=s'		=>\$INPUT_RIS_DIR,          
         's=f'		=>\$MIN_SCORE,   
 );
-
 #temp
 $INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
 my $RXR_VDR_RIS = $INPUT_RIS_DIR . "/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
-
-
 
 my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
 			"<VDRBV_RIS_DIR> ris file from PscanChip\n" .
@@ -87,8 +84,6 @@ open (my $instream,  q{<}, $PWM_FILE) or die("Unable to open $PWM_FILE : $!");
         }
 close $instream;
 
-
-
 ####
 #2. Get all VDR-BVs from file
 ####
@@ -110,10 +105,9 @@ while(<$instream>){
 close $instream;
 
 
-#delete $HASH{$key};
 #############
 #3. Check the vdr-bvs against the RXR:VDR ris:
-#-get a bed from each risc, ordered by decreasing score
+#-get a bed from each .ris, ordered by decreasing score
 #-for each line in bed, see if vdrbv is in interval. If so, remove it from main hash and place in result hash
 #############
 if($RXR_VDR_RIS =~ /BVs_(.*)_(.*)_sites/){
@@ -131,9 +125,11 @@ my $ref = $motif{$full_motif_id};
 my $MOTIF_LENGTH = scalar(@$ref); 
 print STDERR "The length of the motif: $full_motif_id according to the JASPAR Pwm is $MOTIF_LENGTH\n";
 
-
+#I ASSUME the entries in the ris file are sorted by decreasing score by PScanChIP
+#Therefore I fill an array with the corrected entries from the .ris file. I will then search the vdr bv against each array entry
+#breaking at the first interesection, which should be the one with higher score
+my @RIS_ARRAY;
 open ($instream,      q{<}, $RXR_VDR_RIS) or die("Unable to open $RXR_VDR_RIS : $!");
-open (my $outstream,  q{>}, $temp_ris_bed) or die("Unable to open $temp_ris_bed : $!");
 while(<$instream>){
 	chomp;
 	next if($_ eq '');
@@ -153,18 +149,17 @@ while(<$instream>){
 		exit -1;	
 	}
 	my $bed_line = $chr . "\t" . $motif_start . "\t" . $motif_end . "\t" . $score;
-	print $outstream $bed_line, "\n";
+	push(@RIS_ARRAY, $bed_line)
 }
 close $instream;
-close $outstream;
 
 #sort bed file by decreasing score
-system "cat $temp_ris_bed | sort -k4nr > $temp_ris_bed_score_srt";
+#system "cat $temp_ris_bed | sort -k4nr > $temp_ris_bed_score_srt";
 #needs to be checked here
 
 my %RESULTS;
 foreach my $item (keys %VDRBV_coords){
-	my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($item, $temp_ris_bed_score_srt);
+	my $best_scoring_intersecting_pwm = check_vdrbv_intersects_pwm_interval($item);
 	if ($best_scoring_intersecting_pwm){
 		my ($chr, $start, $stop, $score) = split("\t", $best_scoring_intersecting_pwm);
 		#TODO you might want to save more than the score.
@@ -199,18 +194,16 @@ foreach my $vdrbv_coords (keys %RESULTS){
 # should return TRUE if the ris interval contains at least a VDR-BV; under otherwise
 #############
 sub check_vdrbv_intersects_pwm_interval{
-	my ($vdrbv_coords, $filepath) = @_;
+	my ($vdrbv_coords) = @_;
 	
-	my ($chr,$pos) = split("-", $vdrbv_coords);
-	open (my $instream, q{<}, $filepath) or die("Unable to open $filepath : $!");
-	while(<$instream>){
-		chomp;
-		my ($pwm_chr, $pwm_start, $pwm_end) = split("\t", $_);
-		if( ($pwm_chr eq $chr) && ($pos >= $pwm_start) && ($pos <= $pwm_end) ) {
+	my ($vdrbv_chr,$vdrbv_pos) = split("-", $vdrbv_coords);
+	#now search the array until you find an intersection
+	foreach my $pwm_interval (@RIS_ARRAY){
+		my ($pwm_chr, $pwm_start, $pwm_end) = split("\t", $pwm_interval);
+		if( ($pwm_chr eq $vdrbv_chr) && ($vdrbv_pos >= $pwm_start) && ($vdrbv_pos <= $pwm_end) ) {
 			return $_;
-		}
+		}		
 	}
-	close $instream;
 	return undef;
 }
 
