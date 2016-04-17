@@ -86,17 +86,15 @@ get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);
 my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RXR_VDR_RIS);
 print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
 #2 write bed of ris intervals
-my $tmp_ris_bed       = $INPUT_RIS_DIR . '/TMP_from_ris_'  . $motif_string . '.bed';
-my $tmp_intersect_bed = $INPUT_RIS_DIR . '/TMP_intersect_' . $motif_string . '.bed'; 
+my $tmp_ris_bed          = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
+my $tmp_intersect_bed    = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
+my $tmp_no_intersect_bed = $INPUT_RIS_DIR . '/TMP_nointersect_' . $motif_string . '.bed';
 write_ris_to_bed_file($RXR_VDR_PATH, $tmp_ris_bed, $motif_length);
-system "$BEDTOOLS intersect -c -a $IN_VDRBV -b $tmp_ris_bed > $tmp_intersect_bed";
-#in column 9 there is either 1 or zero
-
-#
-#bedtools intersect
-#filter those which intersect and put in RESULT
-#output bed of those that don't intersect
-
+system "$BEDTOOLS intersect -wo -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2\"\t\"\$12\"\t\"\$13}' > $tmp_intersect_bed";
+system "$BEDTOOLS intersect -v -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2}\'> $tmp_no_intersect_bed";
+exit;
+#from those that intersect, fill the results table
+#those that dont intersect them with the other ris files
 
 #OLD
 #2. Fill array of pwm intervals from ris------------------------------------------------------
