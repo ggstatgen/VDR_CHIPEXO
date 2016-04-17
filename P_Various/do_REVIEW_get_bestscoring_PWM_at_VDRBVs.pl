@@ -28,7 +28,6 @@ my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_p
 #my $IN_VDRBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed';
 #my $IN_VDRrBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_VDR_rBVs_hg19.bed';
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
-my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
 
 my $INPUT_RIS_DIR;
 my $MIN_SCORE;
@@ -48,6 +47,9 @@ GetOptions(
 
 #temp
 $INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
+my $RXR_VDR_RIS = $INPUT_RIS_DIR . "/Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
+
+
 
 my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
 			"<VDRBV_RIS_DIR> ris file from PscanChip\n" .
@@ -57,7 +59,7 @@ unless($INPUT_RIS_DIR){
 	print $USAGE;
 	exit -1;
 }
-print "Minimum PScanChIP score set to $MIN_SCORE\n";
+print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
 
 my $temp_ris_bed           = $INPUT_RIS_DIR . '/' . "tmp_intervals.bed";
 my $temp_ris_bed_score_srt = $INPUT_RIS_DIR . '/' . "tmp_intervals_s.bed";
@@ -117,7 +119,6 @@ close $instream;
 if($RXR_VDR_RIS =~ /BVs_(.*)_(.*)_sites/){
 	$motif_name = $1;
 	$identifier = $2;
-	$motif_string = $motif_name . '_' . $identifier;
 }else{
 	print STDERR "ERROR: Unable to recognise the input motif file name: $RXR_VDR_RIS. Aborting.\n";
 	exit -1;
@@ -158,7 +159,7 @@ close $instream;
 close $outstream;
 
 #sort bed file by decreasing score
-system "cat $temp_ris_bed | sort -k4,4V > $temp_ris_bed_score_srt";
+system "cat $temp_ris_bed | sort -k4nr > $temp_ris_bed_score_srt";
 #needs to be checked here
 
 my %RESULTS;
@@ -174,18 +175,21 @@ foreach my $item (keys %VDRBV_coords){
 		next;
 	}
 }
-
-exit;
 #do the above for all the other ris: for each ris get the best scoring intersecting pwm, if any, and then outside the ris file loop choose
 #the global one with the highest score and fill results.
-
-
 
 #reinitialise variables inside file loop
 undef $identifier;
 undef $motif_name;
 unlink $temp_ris_bed;
 unlink $temp_ris_bed_score_srt;
+
+#print output to see it
+foreach my $vdrbv_coords (keys %RESULTS){
+	foreach my $motif_pwm (keys %{$RESULTS{$vdrbv_coords}}){
+		print $vdrbv_coords, "\t", $motif_pwm, "\t", $RESULTS{$vdrbv_coords}{$motif_pwm}, "\n";
+	}
+}
 
 
 
