@@ -28,7 +28,7 @@ my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
-my $PLOT_EXT = 'png';
+my $PLOT_EXT = 'pdf';
 
 my $INPUT_RIS_DIR;
 my $MIN_SCORE;
@@ -61,10 +61,6 @@ unless($INPUT_RIS_DIR){
 }
 print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
 
-my $out_Rdata    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.Rdata';
-my $out_Rcode    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.R';
-my $out_Rplot    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.png';
-my $output_file  = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.tsv';
 
 #Get the motif length from the encode representations of the motif---------------------
 get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);
@@ -185,7 +181,13 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 	$RESULTS{$vdrbv_pos}{$candidate_pwm} = $candidate_score;
 }
 
+
 $MIN_SCORE = 'NA' unless($MIN_SCORE);
+my $out_Rdata    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.Rdata';
+my $out_Rcode    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.R';
+my $out_Rplot    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.' . $PLOT_EXT;
+my $output_file  = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.tsv';
+
 open (my $outstream,  q{>}, $output_file) or die("Unable to open $output_file : $!");
 print $outstream "CHR\tPOS\tASSIGNED_PWM\tSCORE\n";
 foreach my $vdrbv_coords (keys %RESULTS){
@@ -203,16 +205,18 @@ unlink $VDRBV_no_RXRVDR_intersect;
 #R plot
 #I want a bar plot, with the numbers on top of each bar
 #Write R bar plots
-system "cat $output_file | cut -f 3 | sort > $out_Rdata";
+system "grep -v \"ASSIGNED_PWM\" $output_file | cut -f 3 | sort > $out_Rdata";
 open ($outstream,  q{>}, $out_Rcode) or die("Unable to open $out_Rcode : $!");
 print $outstream "data <- read.table(\"$out_Rdata\",sep=\"\\t\")" . "\n";
 print $outstream "data_c <- table(data)" . "\n";
-print $outstream "$PLOT_EXT(file=\"$out_Rplot\")" . "\n";
-print $outstream "bplt <- barplot(data_c, xlab=\"\#PWM models\", ylab=\"\#VDR-BVs\", width=1, main=\"\#VDR-BVs by best PWM model hit(t=$MIN_SCORE)\")" . "\n";
+print $outstream "$PLOT_EXT(file=\"$out_Rplot\", width=14,height=7)" . "\n";
+print $outstream "par(mar = c(11,6,6,4) + 0.3)" . "\n";
+print $outstream "bplt <- barplot(data_c, ylab=\"\#VDR-BVs\", width=1, main=\"\#VDR-BVs by best PWM model hit(t=$MIN_SCORE)\", las=2)" . "\n";
 print $outstream "text(x=bplt, y=data_c, labels=as.character(data_c), pos=3, cex = 0.8, col = \"red\", xpd=TRUE)" . "\n";
 print $outstream "dev.off()" . "\n";
 close $outstream;
 
+system "$RSCRIPT $out_Rcode";
 
 
 #subs--------------------------------------------------------------------------------------------
