@@ -25,31 +25,20 @@ use Getopt::Long;
 
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
-#my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
-#my $CHROMSIZES = '/net/isi-scratch/giuseppe/indexes/chrominfo/hg19.chrom_simple.sizes';
-
-#my $TEMP_PATH = "C:/Users/Giuseppe/Desktop/REVIEW_temp/DATA/";
-#my $IN_VDRBV = $TEMP_PATH . "Output_noDBRECUR.vcf";
-#my $PWM_FILE = $TEMP_PATH . "Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
-
+my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
 my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
-#my $IN_VDRBV_BED = '/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Output_noDBRECUR.bed'; 
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
+my $PLOT_EXT = 'png';
 
 my $INPUT_RIS_DIR;
 my $MIN_SCORE;
-
 #GLOBALS
-#1 vdr-bvs
+#1 vdr-bvs - this will be checked against the ris intervals and intersecting items will be removed
 my %VDRBV_coords;
-#this will be checked against the ris intervals and intersecting items will be removed
-#2
-#contains the jaspar representation of the pws to get the correct length
+#2 contains the jaspar representation of the pws to get the correct length
 my %JASPAR_MOTIF; 
-#3 result structure
-#coord->associated_pwm->score
-my %RESULTS;
-
+#3 result structure: coord->associated_pwm->score
+my %RESULTS; my %results_allpwms;
 #If the best has same score for many motifs? Take the LONGEST
 
 GetOptions(
@@ -58,11 +47,9 @@ GetOptions(
 );
 #temp
 $INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
-#$INPUT_RIS_DIR = $TEMP_PATH . 'RIS';
 #$MIN_SCORE = 0.7;
 my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
 my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
-
 
 my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
 			"<VDRBV_RIS_DIR> ris file from PscanChip\n" .
@@ -74,14 +61,18 @@ unless($INPUT_RIS_DIR){
 }
 print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
 
-#Get all VDR-BVs from file-----------------------------------------------------------------
-#get_vdrbvs_from_file($IN_VDRBV, \%VDRBV_coords);
-#my $VDRBV_initial = keys %VDRBV_coords;
+my $out_Rdata    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.Rdata';
+my $out_Rcode    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.R';
+my $out_Rplot    = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.png';
+my $output_file  = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.tsv';
 
 #Get the motif length from the encode representations of the motif---------------------
 get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);
 
-#RXR:VDR----------
+#########
+#RXR:VDR
+#########
+
 #1 Build pwm ID
 my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RXR_VDR_RIS);
 print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
@@ -100,9 +91,7 @@ while(<$instream>){
 	
 	#get coords
 	my ($chr, $pos, $score) = (split /\t/)[0,2,4];
-	unless($chr =~ /^chr/){
-		$chr = 'chr' . $chr;
-	}
+	unless($chr =~ /^chr/){$chr = 'chr' . $chr;}
 	my $coord = $chr . '-' . $pos;
 	$RESULTS{$coord}{$motif_string} = $score;
 }
@@ -110,15 +99,15 @@ close $instream;
 unlink $tmp_ris_bed;
 unlink $tmp_intersect_bed;
 
-
-#ALL PWM RIS----------
+###############
+#ALL other PWMs
+###############
 #Here I will need an intermediate hash, with
 #pos -> pmw_id1 -> score1
 #   |
 #   |_> pwm_id2 -> score2
 #For each of these positions, I will have to choose the best scoring pwm_id. Also, if two or more have the same score, I pick the largest PWM
 #1st pass: label each vdrbv with the best instanes of all the pwm(s) they fall in
-my %results_allpwms;
 chdir $INPUT_RIS_DIR;
 my @files = <Pscanchip_hg19*.ris>;
 foreach my $RIS_FILE (@files){
@@ -127,7 +116,7 @@ foreach my $RIS_FILE (@files){
 	
 	#1. Build pwm ID------------------------------------------------------------------------------
 	my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RIS_FILE);
-	print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
+	#print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
 	
 	#2. Write ris into bed------------------------------------------------------------------------
 	my $tmp_ris_bed          = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
@@ -144,9 +133,7 @@ foreach my $RIS_FILE (@files){
 		next if($_ eq '');
 		#get coords
 		my ($chr, $pos, $score) = (split /\t/)[0,2,4];
-		unless($chr =~ /^chr/){
-			$chr = 'chr' . $chr;
-		}
+		unless($chr =~ /^chr/){ $chr = 'chr' . $chr;}
 		my $vdr_bv_coord = $chr . '-' . $pos;
 		$results_allpwms{$vdr_bv_coord}{$motif_string}{'SCORE'}      = $score;
 		$results_allpwms{$vdr_bv_coord}{$motif_string}{'PWM_LENGTH'} = $motif_length;
@@ -199,7 +186,6 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 }
 
 $MIN_SCORE = 'NA' unless($MIN_SCORE);
-my $output_file = $INPUT_RIS_DIR . '/RESULTS_bestscoring_pwm_scorethrs_' . $MIN_SCORE . '.tsv';
 open (my $outstream,  q{>}, $output_file) or die("Unable to open $output_file : $!");
 print $outstream "CHR\tPOS\tASSIGNED_PWM\tSCORE\n";
 foreach my $vdrbv_coords (keys %RESULTS){
@@ -211,7 +197,23 @@ foreach my $vdrbv_coords (keys %RESULTS){
 close $outstream;
 unlink $VDRBV_no_RXRVDR_intersect;
 
+#output proportions, too.
+
+
 #R plot
+#I want a bar plot, with the numbers on top of each bar
+#Write R bar plots
+system "cat $output_file | cut -f 3 | sort > $out_Rdata";
+open ($outstream,  q{>}, $out_Rcode) or die("Unable to open $out_Rcode : $!");
+print $outstream "data <- read.table(\"$out_Rdata\",sep=\"\\t\")" . "\n";
+print $outstream "data_c <- table(data)" . "\n";
+print $outstream "$PLOT_EXT(file=\"$out_Rplot\")" . "\n";
+print $outstream "bplt <- barplot(data_c, xlab=\"\#PWM models\", ylab=\"\#VDR-BVs\", width=1, main=\"\#VDR-BVs by best PWM model hit(t=$MIN_SCORE)\")" . "\n";
+print $outstream "text(x=bplt, y=data_c, labels=as.character(data_c), pos=3, cex = 0.8, col = \"red\", xpd=TRUE)" . "\n";
+print $outstream "dev.off()" . "\n";
+close $outstream;
+
+
 
 #subs--------------------------------------------------------------------------------------------
 sub get_vdrbvs_from_file{
@@ -375,6 +377,10 @@ sub check_vdrbv_intersects_pwm_interval{
 }
 
 #OLD
+##Get all VDR-BVs from file-----------------------------------------------------------------
+#get_vdrbvs_from_file($IN_VDRBV, \%VDRBV_coords);
+#my $VDRBV_initial = keys %VDRBV_coords;
+
 #2. Fill array of pwm intervals from ris------------------------------------------------------
 #my @ris_array = get_ris_intervals($RXR_VDR_PATH, $motif_length);
 #3. Check the vdr-bvs against the RXR:VDR ris:------------------------------------------------
