@@ -59,7 +59,7 @@ GetOptions(
 #temp
 $INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
 #$INPUT_RIS_DIR = $TEMP_PATH . 'RIS';
-$MIN_SCORE = 0.8;
+#$MIN_SCORE = 0.7;
 my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
 my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
 
@@ -136,7 +136,7 @@ foreach my $RIS_FILE (@files){
 	
 	#3. Check the vdr-bvs against the ris:--------------------------------------------------------
 	print "Working on $full_motif_id:\n";
-	system "$BEDTOOLS intersect -wo -a $VDRBV_no_RXRVDR_intersect -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$9\"\t\"\$10}' > $tmp_intersect_bed";
+	system "$BEDTOOLS intersect -wo -a $VDRBV_no_RXRVDR_intersect -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$7\"\t\"\$8}' > $tmp_intersect_bed";
 	#4 save those with intersections in temporary hash
 	open (my $instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
 	while(<$instream>){
@@ -168,7 +168,7 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 	
 	if($number_of_pwms == 1){
 		foreach my $this_pwm (keys %{$results_allpwms{$vdrbv_pos}}){
-			$RESULTS{$vdrbv_pos}{$this_pwm} = $results_allpwms{$vdrbv_pos}{'SCORE'};
+			$RESULTS{$vdrbv_pos}{$this_pwm} = $results_allpwms{$vdrbv_pos}{$this_pwm}{'SCORE'};
 		}
 		next;
 	}
@@ -177,8 +177,8 @@ foreach my $vdrbv_pos (keys %results_allpwms){
 	my $candidate_length = 0;
 	my $candidate_pwm = '';
 	foreach my $this_pwm (keys %{$results_allpwms{$vdrbv_pos}}){
-		my $this_score = $results_allpwms{$vdrbv_pos}{'SCORE'};
-		my $this_length =  $results_allpwms{$vdrbv_pos}{'PWM_LENGTH'};
+		my $this_score = $results_allpwms{$vdrbv_pos}{$this_pwm}{'SCORE'};
+		my $this_length =  $results_allpwms{$vdrbv_pos}{$this_pwm}{'PWM_LENGTH'};
 		if($this_score > $candidate_score){
 			$candidate_pwm = $this_pwm;
 			$candidate_score = $this_score;
@@ -209,8 +209,9 @@ foreach my $vdrbv_coords (keys %RESULTS){
 	}
 }
 close $outstream;
+unlink $VDRBV_no_RXRVDR_intersect;
 
-
+#R plot
 
 #subs--------------------------------------------------------------------------------------------
 sub get_vdrbvs_from_file{
