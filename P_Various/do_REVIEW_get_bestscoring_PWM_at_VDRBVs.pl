@@ -26,7 +26,8 @@ use Getopt::Long;
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
-my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+#my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf";
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 my $PLOT_EXT = 'pdf';
 
@@ -42,17 +43,15 @@ my %RESULTS; my %results_allpwms;
 #If the best has same score for many motifs? Take the LONGEST
 
 GetOptions(
-        'm=s'		=>\$INPUT_RIS_DIR,          
+        'i=s'		=>\$INPUT_RIS_DIR,          
         's=f'		=>\$MIN_SCORE,   
 );
 #temp
-$INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
+#$INPUT_RIS_DIR = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/VDR-BV";
 #$MIN_SCORE = 0.7;
-my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
-my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
 
-my $USAGE = "\nUSAGE: $0 -m=<VDRBV_RIS_DIR> -t=<MIN_SCORE>\n" .
-			"<VDRBV_RIS_DIR> ris file from PscanChip\n" .
+my $USAGE = "\nUSAGE: $0 -i=<VDRBV_RIS_DIR> -s=<MIN_SCORE>\n" .
+			"<VDRBV_RIS_DIR> full path with .ris files from PscanChip\n" .
 			"(opt)<MIN_SCORE> min PscanChip score to consider (default=undef)\n";
 			
 unless($INPUT_RIS_DIR){
@@ -60,6 +59,10 @@ unless($INPUT_RIS_DIR){
 	exit -1;
 }
 print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
+
+#my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
+my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRrBVs_RXRA-VDR_MA0074.1_sites.ris";
+my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
 
 
 #Get the motif length from the encode representations of the motif---------------------
