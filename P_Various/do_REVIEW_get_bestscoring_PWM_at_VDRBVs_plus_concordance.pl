@@ -5,6 +5,9 @@ use File::Basename;
 use Getopt::Long;
 
 
+#30.5.2016
+#This script is an extension of do_REVIEW_get_bestscoring_PWM_at_VDRBVs.pl that looks at concordance before assigning VDR-BVs to motifs.
+
 #22/5/2016
 #Following discussion with Chris (few days before leaving Oxford) he reckons that if we extend this analysis to clean up based on phenotype
 # (concordance and discordance) we might be able to create a response for the reviewers.
@@ -12,34 +15,21 @@ use Getopt::Long;
 #to calculate concordance, we will need:
 #1-genotypes, and ancestral info, so the full alleleseq 20 sample vcf
 #2-phenotypes and therefore the alleleseq  output
-#the script doing the above is do_REVIEW_get_bestscoring_PWM_at_VDRBVs_plus_concordance.pl
 
-#6/4/2016
-#Following the latest batch of comments from Chris and Wilfried, I want to :
-#1-associate each VDR-BV hitting a VDR-RXR motif with strong score, and move aside
-#2-for all remaining VDR-BVs, what is the strongest motif (by score) being hit? associate to that
-
-#in the end you want a plot mapping every VDR-BV to the BEST motif they hit.
-#All the bottom code is useless atm. Need to rewrite.
-
-#Inputs: all the enriched VDR-BV (not VDR-rBV).ris files with a pwm interval for each of the 43K
-#main loop: for each VDR-BV:
-#does the VDR-BV intersect a RXR::VDR with pscanchip > 0.8?
-#yes: store in hash with labels
-#no: check all ris files. For all the pwms for which an intersection is found, check score (KEEP THRESHOLD AT 0.8?)
-#store best scoring  in hash with labels 
-
-#I ASSUME the entries in the ris file are sorted by decreasing score by PScanChIP
-#Therefore I fill an array with the corrected entries from the .ris file. I will then search the vdr bv against each array entry
-#breaking at the first intersection, which should be the one with higher score
+#see  do_REVIEW_get_bestscoring_PWM_at_VDRBVs.pl for full readme
 
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
-my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_REVIEW_asym_anc/Output_noDBRECUR.vcf";
 #my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf";
 my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
 my $PLOT_EXT = 'pdf';
+
+#phenotype from here
+my $INFILE_ALLELESEQ_RAW = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt";
+#genotype from here
+my $INPUT_VARIANTS = '/net/isi-scratch/giuseppe/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz';
 
 my $INPUT_RIS_DIR;
 my $MIN_SCORE;
@@ -74,36 +64,196 @@ print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
 my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRrBVs_RXRA-VDR_MA0074.1_sites.ris";
 my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
 
-get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);
-#########
-#Find the motif intervals that intersect an RXR:VDR motif -> pick the *concordant* ones and set them aside.
-#########
-#1 Build pwm ID
-my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RXR_VDR_RIS);
-print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
-#2 write bed of ris intervals
-my $tmp_ris_bed               = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
-my $tmp_intersect_bed         = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
-my $VDRBV_no_RXRVDR_intersect = $INPUT_RIS_DIR . '/TMP_nointersect_' . $motif_string . '.bed';
-write_ris_to_bed_file($RXR_VDR_PATH, $tmp_ris_bed, $motif_length);
-system "$BEDTOOLS intersect -wo -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2\"\t\"\$12\"\t\"\$13}' > $tmp_intersect_bed";
-system "$BEDTOOLS intersect -v -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2}\'> $VDRBV_no_RXRVDR_intersect";
 
-open (my $instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
-while(<$instream>){
+#COLLECT VDR-BV genotypes
+#####################
+#1 build huge hash to map chr-pos to ref,ancestral and alternate
+#####################
+my %variants_1kg;
+tie *FILE,   'IO::Zlib', $INPUT_VARIANTS, "rb";
+while (<FILE>)	{ 
 	chomp;
 	next if($_ eq '');
+	next if($_ =~ /^#/);
 	
-	#get coords
-	my ($chr, $pos, $score) = (split /\t/)[0,2,4];
-	unless($chr =~ /^chr/){$chr = 'chr' . $chr;}
-	my $coord = $chr . '-' . $pos;
-	$RESULTS{$coord}{$motif_string} = $score;
+	my @fields = split("\t", $_);
+	#skip indels
+	next if(length($fields[3]) > 1);
+	next if(length($fields[4]) > 1);
+	
+	my $key = $fields[0] . '-' . $fields[1];
+	my $ref = uc($fields[3]); 
+	my $alt = uc($fields[4]);
+	
+	#get ancestral
+	my @info = split(";", $fields[7]);	
+	if($info[0] =~ /^AA=(.*)/){
+		my $anc = uc($1);
+		if($anc eq $alt){
+			$variants_1kg{$key}{ANC} = $alt;
+			$variants_1kg{$key}{DER} = $ref;	
+		}elsif($anc eq $ref){
+			$variants_1kg{$key}{ANC} = $ref;
+			$variants_1kg{$key}{DER} = $alt;			
+		}elsif( ($anc eq '') or ($anc eq 'N') or ($anc eq '.') or ($anc eq '-') ){
+			next;
+		}else{ 
+			next;		
+		}
+	}else{
+			next;	
+	}	
+}
+close FILE;
+
+
+#COLLECT VDR::RXR PHENOTYPES
+###################
+#2 build interestinghets hash
+###################
+my %position2sample2readdepth;
+open (my $instream,  q{<}, $INFILE_ALLELESEQ_RAW) or die("Unable to open $INFILE_ALLELESEQ_RAW : $!");
+while(<$instream>){
+	chomp;
+	next if($_ =~ /^sample/); #header
+	next if($_ eq '');
+	
+	#format
+	#sample	chrm	snppos	ref	mat_gtyp	pat_gtyp	c_gtyp	phase	mat_all	pat_all	cA	cC	cG	cT	winning	SymCls	SymPval	BindingSite	cnv
+	#NA06986	1	1080920	G	S	W	R	PHASED	G	A	2	0	7	0	M	Sym	0.1796875	1	1.0
+	my ($sample_id, $chr,$snppos, $ref, $m_allele, $p_allele, $cA, $cC, $cG, $cT, $winner, $symcls) = (split /\t/)[0,1,2,3,8,9,10,11,12,13,14,15];
+	next if(!$chr);
+	next if(!$snppos);
+	
+	next unless ($symcls =~ /Asym/);
+	
+	my $coordinate_id = $chr . '-' . $snppos;
+	my $allele_ancestral = $variants_1kg{$coordinate_id}{ANC};
+	my $allele_derived = $variants_1kg{$coordinate_id}{DER}; 
+	next unless($allele_ancestral);
+	next unless($allele_derived);
+
+	if( ($m_allele eq 'None') or ($p_allele eq 'None')  ){
+	}else{
+		if( ($allele_ancestral eq $m_allele)  && ($allele_derived eq $p_allele) ){		
+		}elsif( ($allele_ancestral eq $p_allele)  && ($allele_derived eq $m_allele)  ){	
+		}else{
+			print STDERR "$coordinate_id: (ancestral ref/alt and mat/pat don't match: ($allele_ancestral, $allele_derived) and ($m_allele, $p_allele)\n";
+			next;
+		}		
+	}
+	my $read_data = join(",", $allele_ancestral,$allele_derived, $cA, $cC, $cG, $cT);
+	$position2sample2readdepth{$coordinate_id}{$sample_id} = $read_data;
 }
 close $instream;
-unlink $tmp_ris_bed;
-unlink $tmp_intersect_bed;
 
+################
+#3. Get the motif length from the encode representations of the motif---------------------
+################
+get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);
+
+##################
+#4 Build pwm ID
+##################
+my ($motif_string, $full_motif_id, $motif_length) = get_pwm_id($RXR_VDR_RIS);
+print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
+
+#########
+#5. Find the motif intervals that intersect an RXR:VDR motif -> pick the *concordant* ones and set them aside.
+#if the vdrbv hits a motif and the hit is concordant, save it into a result hash, and REMOVE it from the master VCF file -
+#or in other words create a vcf hash with all the ones that:
+#1-do not hit a VDR:RXR motifbr
+#2-they do, but the phenotype is discordant
+#########
+my %vdrbv_breaking_rxrvdr; #these break rxrvdr with concordance
+my %vdrbv_notbreaking_rxrvdr; #these break one or more motif but not rxrvdr so get tested with all other pwms
+my %vdrbv_nobreak; #these do not break anything, any motif at all - count
+
+my %motifmodel_motifpos2geomicpos2concordance;
+open ($instream,  q{<}, $IN_VDRBV) or die("Unable to open $IN_VDRBV : $!");
+while(<$instream>){
+	chomp;
+	my $info_motifbr;
+	next if($_ =~ /^\#/);
+	next if($_ eq '');
+	
+	#get info field
+	my ($chr, $pos, $rs_id, $funseq_ref, $funseq_alt, $info) = (split /\t/)[0,1,2,3,4,7];
+	my $chr_hg19 = $chr;
+	$chr =~ s/chr(.*)/$1/; #alleleseq is b37, this is hg19
+	my $genomic_coord = $chr . '-' . $pos;
+	
+	my @info = split(";", $info);
+	foreach my $item (@info){
+		$info_motifbr = $item if($item =~ /^MOTIFBR/);
+	}
+
+	#if the VDR-BV does not break any motif at all, including the enriched, keep it to count 
+	unless($info_motifbr){
+		$vdrbv_nobreak{$genomic_coord} = 1;
+		next;
+	}
+	
+	#motifbr info is structured as follows
+	#MOTIFBR=VDR#VDR_JASPAR#139340766#139340781#+#13#0.000#0.900,VDR#VDR_XXmotif#139340766#139340781#+#13#0.04338#0.80145
+	my ($motif_change_type,$motif_change_byTF) = split("=", $info_motifbr);
+	my @motif_change_byTF = split(",", $motif_change_byTF);
+	
+	#here you only want the motif corresponding to full_motif_id
+	foreach my $item (@motif_change_byTF){
+		my ($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);		
+		#the vdrbv breaks a motif but not the RXR:VDR
+		unless( $TF_motif eq $full_motif_id){
+			$vdrbv_notbreaking_rxrvdr{$_} = 1;
+			next;
+		}
+		
+		if(!$position2sample2readdepth{$genomic_coord}){
+			print STDERR "$rs_id - $genomic_coord: no ancestral/derived info available for this VDR-BV. Skipping..\n";
+			next;
+		}		
+		my $GT_SCORE;my $concordant = 0;my $discordant = 0;
+		#Compute gt_score from $TF_alt_score and $TF_alt_score
+		#these should already account for ancestral allele in funseq
+		$GT_SCORE = ( $TF_ref_score + 1 ) / ($TF_alt_score + 1); 
+		
+		#Compute ph score and evaluate concordance with gt score at that position	
+		foreach my $sample (sort keys %{ $position2sample2readdepth{$genomic_coord} }){
+			my $PH_SCORE_this_sample = process_read_data($position2sample2readdepth{$genomic_coord}{$sample}, $sample, $rs_id);	
+			if( ($GT_SCORE >= 1) && ($PH_SCORE_this_sample >= 1) ){
+				$concordant += 1;
+			}elsif( ($GT_SCORE >= 1) && ($PH_SCORE_this_sample < 1)  ){
+				$discordant += 1;
+			}elsif( ($GT_SCORE < 1) && ($PH_SCORE_this_sample >= 1)  ){
+				$discordant += 1;
+			}elsif( ($GT_SCORE < 1) && ($PH_SCORE_this_sample < 1)  ){
+				$concordant += 1;
+			}else{
+				print STDERR "Should never be here\n";
+			}
+		}
+		
+		#if the VDR-BV gt change agrees with the ph, keep it, otherwise, test this vdr bv with another PWM
+		if($concordant > $discordant){ #TODO rather permissive definition
+			#I want to count unique coordinates so I only pass those to the hash:
+			$vdrbv_breaking_rxrvdr{$genomic_coord} = 1;
+		}else{
+			$vdrbv_notbreaking_rxrvdr{$_} = 1;
+		}
+	}
+}
+close $instream;
+
+my $vdrbv_nobreak = scalar keys %vdrbv_nobreak;
+my $vdrbv_breaking_rxrvdr = scalar keys %vdrbv_breaking_rxrvdr;
+
+print STDERR "Number of VDR-BVs that break none of the 30ish enriched: $vdrbv_nobreak\n";
+print STDERR "Number of VDR-BVs that break RXR::VDR and are gt-ph concordant: $vdrbv_breaking_rxrvdr\n";
+
+
+#now test the remaining VDR-BVs in vdrbv to identify the best
+#if there are several PWMs broken, take the one with the best score (how?)
+#if many PWMs with the same score are broken, take the longest
 ###############
 #ALL other PWMs
 ###############
@@ -117,6 +267,8 @@ chdir $INPUT_RIS_DIR;
 my @files = <Pscanchip_hg19*.ris>;
 foreach my $RIS_FILE (@files){
 	next if ($RIS_FILE eq $RXR_VDR_RIS);
+	my %concordant_for_this_pwm;
+	
 	my $RIS_FILE_PATH = $INPUT_RIS_DIR  . '/' . $RIS_FILE;
 	
 	#1. Build pwm ID------------------------------------------------------------------------------
@@ -124,14 +276,81 @@ foreach my $RIS_FILE (@files){
 	#print STDERR "The length of the motif: $full_motif_id according to the JASPAR PWM is $motif_length\n";
 	
 	#2. Write ris into bed------------------------------------------------------------------------
-	my $tmp_ris_bed          = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
-	my $tmp_intersect_bed    = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
+	my $tmp_ris_bed           = $INPUT_RIS_DIR . '/TMP_from_ris_'     . $motif_string . '.bed';
+	my $tmp_vdrbv_concord_bed = $INPUT_RIS_DIR . '/TMP_vdrbvconc_'    . $motif_string . '.bed';
+	my $tmp_intersect_bed     = $INPUT_RIS_DIR . '/TMP_intersect_'    . $motif_string . '.bed';
 	write_ris_to_bed_file($RIS_FILE_PATH, $tmp_ris_bed, $motif_length);
 	
-	#3. Check the vdr-bvs against the ris:--------------------------------------------------------
+	#3. Test all the VDR-BVs not breaking RXR::VDR for concordant breakage of this full motif id---------------
+	foreach (keys %vdrbv_notbreaking_rxrvdr){
+		my $info_motifbr;
+		my ($chr, $pos, $rs_id, $funseq_ref, $funseq_alt, $info) = (split /\t/)[0,1,2,3,4,7];
+		my $chr_hg19 = $chr;
+		$chr =~ s/chr(.*)/$1/; #alleleseq is b37, this is hg19
+		my $genomic_coord = $chr . '-' . $pos;
+		my $bedline = $chr . "\t" . ($pos-1) . "\t" . $pos;
+		
+		my @info = split(";", $info);
+		foreach my $item (@info){
+			$info_motifbr = $item if($item =~ /^MOTIFBR/);
+		}
+		
+		#double check - it should never enter the following 
+		unless($info_motifbr){
+			print STDERR "WARNING: it shouldn't be here...Skipping this vdrbv..\n";
+			next;
+		}
+		
+		#motifbr info is structured as follows
+		#MOTIFBR=VDR#VDR_JASPAR#139340766#139340781#+#13#0.000#0.900,VDR#VDR_XXmotif#139340766#139340781#+#13#0.04338#0.80145
+		my ($motif_change_type,$motif_change_byTF) = split("=", $info_motifbr);
+		my @motif_change_byTF = split(",", $motif_change_byTF);
+		
+		#here you only want the motif corresponding to full_motif_id
+		foreach my $item (@motif_change_byTF){
+			my ($TF,$TF_motif,$TF_motif_start,$TF_motif_end,$TF_motif_strand,$TF_snp_position,$TF_alt_score,$TF_ref_score) =  split("#", $item);		
+			#the vdrbv breaks a motif but not the one we are probing right now - skip it:
+			next unless( $TF_motif eq $full_motif_id);
+			
+			if(!$position2sample2readdepth{$genomic_coord}){
+				print STDERR "$rs_id - $genomic_coord: no ancestral/derived info available for this VDR-BV. Skipping..\n";
+				next;
+			}		
+			
+			my $GT_SCORE;my $concordant = 0;my $discordant = 0;
+			#Compute gt_score from $TF_alt_score and $TF_alt_score
+			#these should already account for ancestral allele in funseq
+			$GT_SCORE = ( $TF_ref_score + 1 ) / ($TF_alt_score + 1); 
+			
+			#Compute ph score and evaluate concordance with gt score at that position	
+			foreach my $sample (sort keys %{ $position2sample2readdepth{$genomic_coord} }){
+				my $PH_SCORE_this_sample = process_read_data($position2sample2readdepth{$genomic_coord}{$sample}, $sample, $rs_id);	
+				if( ($GT_SCORE >= 1) && ($PH_SCORE_this_sample >= 1) ){
+					$concordant += 1;
+				}elsif( ($GT_SCORE >= 1) && ($PH_SCORE_this_sample < 1)  ){
+					$discordant += 1;
+				}elsif( ($GT_SCORE < 1) && ($PH_SCORE_this_sample >= 1)  ){
+					$discordant += 1;
+				}elsif( ($GT_SCORE < 1) && ($PH_SCORE_this_sample < 1)  ){
+					$concordant += 1;
+				}else{
+					print STDERR "Should never be here\n";
+				}
+			}
+			
+			#I have those that are concordant for this PWM but not the scores..I need to intersect a file of concordant vdrbvs with the pscanchip bed obtained in 2..
+			$concordant_for_this_pwm{$bedline} = 1 if($concordant > $discordant);
+		}
+	}
+	#create bed of concordant vdrbv and do the intersection down here to get the score
+	open (my $outstream,  q{>}, $tmp_vdrbv_concord_bed) or die("Unable to open $tmp_vdrbv_concord_bed : $!");
+	foreach my $item (keys %concordant_for_this_pwm){ print $outstream $item, "\n"; }
+	close $outstream;
+		
+	#4. Get the pscanchip scores for the concordant vdrbvs for this pwm:-------------------------------------------------------
 	print "Working on $full_motif_id:\n";
-	system "$BEDTOOLS intersect -wo -a $VDRBV_no_RXRVDR_intersect -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$7\"\t\"\$8}' > $tmp_intersect_bed";
-	#4 save those with intersections in temporary hash
+	system "$BEDTOOLS intersect -wo -a $tmp_vdrbv_concord_bed -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$7\"\t\"\$8}' > $tmp_intersect_bed";
+	#4 all of them should have intersections (TODO check) - save them with their scores
 	open (my $instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
 	while(<$instream>){
 		chomp;
@@ -146,7 +365,47 @@ foreach my $RIS_FILE (@files){
 	close $instream;
 	unlink $tmp_ris_bed;
 	unlink $tmp_intersect_bed;
+	unlink $tmp_vdrbv_concord_bed;
 }
+#TODO WORK HERE
+
+
+
+
+##2 write bed of ris intervals
+#my $tmp_ris_bed               = $INPUT_RIS_DIR . '/TMP_from_ris_'    . $motif_string . '.bed';
+#my $tmp_intersect_bed         = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.bed';
+#my $VDRBV_no_RXRVDR_intersect = $INPUT_RIS_DIR . '/TMP_nointersect_' . $motif_string . '.bed';
+#my $tmp_intersect_vcf         = $INPUT_RIS_DIR . '/TMP_intersect_'   . $motif_string . '.vcf';
+#write_ris_to_bed_file($RXR_VDR_PATH, $tmp_ris_bed, $motif_length);
+#system "$BEDTOOLS intersect -wo -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2\"\t\"\$12\"\t\"\$13}' > $tmp_intersect_bed";
+#system "$BEDTOOLS intersect -v -a $IN_VDRBV -b $tmp_ris_bed | awk -F \"\t\" \'{print \$1\"\t\"\$2-1\"\t\"\$2}\'> $VDRBV_no_RXRVDR_intersect";
+#
+#open ($instream,  q{<}, $tmp_intersect_bed) or die("Unable to open $tmp_intersect_bed : $!");
+#while(<$instream>){
+#	chomp;
+#	next if($_ eq '');
+#	
+#	#get coords
+#	my ($chr, $pos, $score) = (split /\t/)[0,2,4];
+#	unless($chr =~ /^chr/){$chr = 'chr' . $chr;}
+#	my $coord = $chr . '-' . $pos;
+#	$RESULTS{$coord}{$motif_string} = $score;
+#}
+#close $instream;
+#unlink $tmp_ris_bed;
+#unlink $tmp_intersect_bed;
+
+
+
+
+
+
+
+
+
+
+
 	
 #2nd pass--
 #for every position, choose one pwm
@@ -206,7 +465,7 @@ foreach my $vdrbv_coords (keys %RESULTS){
 	}
 }
 close $outstream;
-unlink $VDRBV_no_RXRVDR_intersect;
+#unlink $VDRBV_no_RXRVDR_intersect;
 
 #output proportions, too.
 
@@ -226,6 +485,21 @@ print $outstream "dev.off()" . "\n";
 close $outstream;
 
 system "$RSCRIPT $out_Rcode";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #subs--------------------------------------------------------------------------------------------
