@@ -6,7 +6,7 @@ use Bio::EnsEMBL::Registry;
 
 #input
 #csv table from rebecca as follows
-#Accession #	SHR/WKY
+#Accession #	Expression
 #IPI00231783.5	0.001
 #IPI00776952.1	0.002
 #IPI00231699.5	0.003
@@ -22,7 +22,7 @@ use Bio::EnsEMBL::Registry;
 
 #output
 #tsv table with
-#IPI\tENSP_ID\tSHR_WKY_ratio
+#IPI\tENSP_ID\tSHR_WKY_expression_value
 
 #Idea: query ensembl with each ipi,GET the ensp for each line
 #NOTA ad ogni ipi puo corrispondere piu di un ensembl id
@@ -45,28 +45,31 @@ $registry -> load_registry_from_db(
 
 #my $gene_adaptor = $registry->get_adaptor('Rattus Norvegicus', 'core', 'Gene');
 my $translation_adaptor = $registry->get_adaptor( "Rattus Norvegicus", "core","translation" );
+die "Unable to obtain translation adaptor" unless($translation_adaptor);
 
 my $count=0;
-print "IPI\tENSP_ID\tENSG_NAME\tSHR_WKY_ratio\n";
+print "ORIG_ID\tENSP_ID\tENSG_NAME\tEXPR\n";
 open (my $instream,  q{<}, $infile) or die("Unable to open $infile : $!");
 while(<$instream>){
 	chomp;
 	next if($_ eq '');
 	next if($_ =~ /Accession/); #header
-	my $gene_name;my $index;
-	my ($ID_IPI, $ratio) = (split /\t/)[0,1];
+	my $gene_name;
+	my $index;
+	my ($INPUT_ID, $expression_value) = (split /\t/)[0,1];
+	#print $INPUT_ID, "\t", $expression_value, "\n";
 	my $ENS_ID;
 	
 	#refseq translations
-	my @translations = @{$translation_adaptor->fetch_all_by_external_name($ID_IPI)};
+	my @translations = @{$translation_adaptor->fetch_all_by_external_name($INPUT_ID)};
 	if(!@translations){
-		#print STDERR "\nNo translations for $ID_IPI\n";
+		#print STDERR "\nNo translations for $INPUT_ID\n";
 		$count++;
 		next;
 	}
 		
 	#now we suppose there are >1 translations. Let's get the most recent gene name:
-#	my @genes = @{$gene_adaptor->fetch_all_by_external_name($ID_IPI)};
+#	my @genes = @{$gene_adaptor->fetch_all_by_external_name($INPUT_ID)};
 #	next if(!@genes);#should never get in here - if it does the translation is some random crap
 #	if (scalar @genes > 1){ #I'll choose the last version
 #		my $max;my $x = 0;my @versions;$index = 0;
@@ -86,7 +89,7 @@ while(<$instream>){
 		foreach my $translation (@translations) { push(@versions, $translation->version()); }
 		for ( @versions ){
 			if (!defined $max or $_ > $max){ $index = $x; $max = $_; }
-    		$x++;
+    			$x++;
 		}
 		$ENS_ID = $translations[$index]->stable_id();
 		#get the gene name # SUGGESTION DAN STAINES
@@ -96,7 +99,7 @@ while(<$instream>){
 		if(!$gene_name){
 			$gene_name = ($gene->display_xref()) ? $gene->display_xref()->primary_id() : $gene->stable_id();
 		}
-	}else{#only one translation object for this IPI
+	}else{#only one translation object for this INPUT ID
 		$ENS_ID = $translations[0]->stable_id();
 		my $transcript = $translations[0]->transcript();
 		my $gene = $transcript->get_Gene();
@@ -106,16 +109,16 @@ while(<$instream>){
 		}
 	}
 	$gene_name = '' if(!$gene_name);
-	print $ID_IPI  . "\t" . $ENS_ID . "\t" . $gene_name . "\t" .  $ratio . "\n" if($ENS_ID);
+	print $INPUT_ID  . "\t" . $ENS_ID . "\t" . $gene_name . "\t" .  $expression_value . "\n" if($ENS_ID);
 }
 close $instream;
 #print STDERR 'count: ' . $count . "\n";
 	
 
 	
-	#print $ID_IPI . "\n";
-#	#my $gene = $gene_adaptor->fetch_by_display_label($ID_IPI);
-#	my @genes = @{$gene_adaptor->fetch_all_by_external_name($ID_IPI)};
+	#print $INPUT_ID . "\n";
+#	#my $gene = $gene_adaptor->fetch_by_display_label($INPUT_ID);
+#	my @genes = @{$gene_adaptor->fetch_all_by_external_name($INPUT_ID)};
 #	foreach my $gene (@genes){
 #		
 #	print "GENE ", $gene->stable_id(), "\n";
