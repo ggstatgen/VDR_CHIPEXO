@@ -4,37 +4,41 @@ use warnings;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 
+#27/6/2016
+#script to clean up data file from Holger/Rebecca of anything to necessary and at the
+#the same time convert Uniprot to EnsP using the Ensembl API
+
+#The idea is that you first run this, then for all the unsolved cases, you try biomart.
+
+
 #input
 #csv table from rebecca as follows
-#Accession #	Expression
-#IPI00231783.5	0.001
-#IPI00776952.1	0.002
-#IPI00231699.5	0.003
-#IPI00211053.6	0.003
-#IPI00780332.1	0.006
-#IPI00393489.2	0.006
-#IPI00189811.1	0.007
-#IPI00202616.1	0.008
-#IPI00212908.2	0.008
-#IPI00213057.3	0.008
-#IPI00198497.1	0.009
-#IPI00951953.1	0.009
+
+#Protein	Description	MSS11223 SINQ Co culture MIC SIn	MSS11224 SINQ Myocytes MIC SIn	ratio Co/Myo	fold regulation Co/myo
+#sp|Q8VHU4|ELP1_RAT	Elongator complex protein 1 OS=Rattus norvegicus GN=Ikbkap PE=2 SV=1		3.39E-008	0	#DIV/0!
+
+#clean id from field 0
+#query it against Ensembl API
+#save field 0, new id, field 2,3,4
+#for now, skip all those that have DIV in field 4
+#for the future,
+#if 2 or 3 are empty then use the checks Rebecca wants
+
 
 #output
 #tsv table with
-#IPI\tENSP_ID\tSHR_WKY_expression_value
+#ORIG_ID\tENSP_ID\tGENE_NAME\tRATIO
 
-#Idea: query ensembl with each ipi,GET the ensp for each line
-#NOTA ad ogni ipi puo corrispondere piu di un ensembl id
 
 my $infile;
 GetOptions(
-        'i=s'  =>\$infile,
+    'i=s'  =>\$infile,
 );
 if(!$infile){
-     print "USAGE: do_data_Rebecca.pl -i=<INFILE>\n";
-     print "<INFILE> csv obtained from Rebecca's tables including expression level column\n";
-     exit 1;
+    print "USAGE: $0 -i=<INFILE>\n";
+    print "<INFILE> csv obtained from Rebecca's tables including expression level column\n";
+    print "Uniprot ID in field 0, espression in field 4\n";
+    exit 1;
 }
 
 my $registry = 'Bio::EnsEMBL::Registry';
@@ -48,22 +52,35 @@ my $translation_adaptor = $registry->get_adaptor( "Rattus Norvegicus", "core","t
 die "Unable to obtain translation adaptor" unless($translation_adaptor);
 
 my $count=0;
-print "ORIG_ID\tENSP_ID\tENSG_NAME\tEXPR\n";
+print "ORIG_ID\tENSP_ID\tENSG_NAME\tEXPR_RATIO\n";
 open (my $instream,  q{<}, $infile) or die("Unable to open $infile : $!");
 while(<$instream>){
 	chomp;
 	next if($_ eq '');
-	next if($_ =~ /Accession/); #header
+	next if($_ =~ /^Protein/); #header
 	my $gene_name;
 	my $index;
-	my ($INPUT_ID, $expression_value) = (split /\t/)[0,1];
+	my ($input_id_string, $treat, $control, $ratio_tr_ctrl) = (split /\t/)[0,2,3,4];
 	#print $INPUT_ID, "\t", $expression_value, "\n";
-	my $ENS_ID;
+	#extract id
+    my $INPUT_ID; my $ENS_ID;
+
+    if($input_id_string =~ /.*\|(.*)\|.*/){
+        $INPUT_ID = $1;
+	}else{
+        print STDERR "Warning: unable to extract UniprotID from this $input_id_string. Skipping..\n";
+        next;
+    }
+
+
+    #remove any isoforms 
+    $INPUT_ID =~ s/(.*)\-\d+/$1/;
+    print $INPUT_ID, "\n"; next;
 	
 	#refseq translations
 	my @translations = @{$translation_adaptor->fetch_all_by_external_name($INPUT_ID)};
 	if(!@translations){
-		#print STDERR "\nNo translations for $INPUT_ID\n";
+		print STDERR "\nNo translations for $INPUT_ID\n";
 		$count++;
 		next;
 	}
@@ -89,7 +106,7 @@ while(<$instream>){
 		foreach my $translation (@translations) { push(@versions, $translation->version()); }
 		for ( @versions ){
 			if (!defined $max or $_ > $max){ $index = $x; $max = $_; }
-    			$x++;
+    		$x++;
 		}
 		$ENS_ID = $translations[$index]->stable_id();
 		#get the gene name # SUGGESTION DAN STAINES
@@ -109,10 +126,11 @@ while(<$instream>){
 		}
 	}
 	$gene_name = '' if(!$gene_name);
-	print $INPUT_ID  . "\t" . $ENS_ID . "\t" . $gene_name . "\t" .  $expression_value . "\n" if($ENS_ID);
+
+	print STDOUT $INPUT_ID  . "\t" . $ENS_ID . "\t" . $gene_name . "\t" . $ratio_tr_ctrl . "\n" if($ENS_ID);
 }
 close $instream;
-#print STDERR 'count: ' . $count . "\n";
+print STDERR 'count missed: ' . $count . "\n";
 	
 
 	
