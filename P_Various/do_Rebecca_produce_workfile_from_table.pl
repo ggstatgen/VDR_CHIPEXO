@@ -35,7 +35,8 @@ die $USAGE if(!$infile);
 
 
 my $count=0;
-print STDOUT "ORIG_ID\tNAME\tEXPR_RATIO\n";
+#print STDOUT "ORIG_ID\tNAME\tEXPR_RATIO\n";
+print STDOUT "ORIG_ID\tNAME\tTREAT\tCTRL\n";
 open (my $instream,  q{<}, $infile) or die("Unable to open $infile : $!");
 while(<$instream>){
 	chomp;
@@ -58,7 +59,9 @@ while(<$instream>){
     #remove any isoforms 
     $INPUT_ID =~ s/(.*)\-\d+/$1/;
     
-	print STDOUT $INPUT_ID  . "\t" . ucfirst($gene_name) . "\t" . $ratio_tr_ctrl . "\n";
+    #print STDOUT $INPUT_ID  . "\t" . ucfirst($gene_name) . "\t" . $ratio_tr_ctrl . "\n";
+    print STDOUT $INPUT_ID  . "\t" . ucfirst($gene_name) . "\t" . $treat . "\t" . $control . "\n";
+
 }
 close $instream;
 print STDERR 'count missed: ' . $count . "\n";
