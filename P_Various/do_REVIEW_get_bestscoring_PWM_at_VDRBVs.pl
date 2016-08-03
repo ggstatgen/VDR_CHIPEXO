@@ -4,6 +4,16 @@ use warnings;
 use File::Basename;
 use Getopt::Long;
 
+#29/6/2016
+#Met Chris in Edinburgh. He wants me to remove from this calculation all the PWMs which are in there because they are enriched only at VDR-rBVs.
+#and recalculate the final table at pscanchip=0.7
+#the PWMS to disregard are
+#NR2C2 MA0504.1 
+#ESR2 MA0258.2 
+#Esrrb MA0141.2
+#RUNX1 MA0002.1
+#GABPA MA0062.1
+
 
 #22/5/2016
 #Following discussion with Chris (few days before leaving Oxford) he reckons that if we extend this analysis to clean up based on phenotype
@@ -36,9 +46,11 @@ use Getopt::Long;
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
 my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
-my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
-#my $IN_VDRBV = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf";
-my $PWM_FILE = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/funseq2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
+
+my $IN_VDRBV = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
+#my $IN_VDRBV = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf";
+#my $PWM_FILE = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT.txt";
+my $PWM_FILE = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/PSCANCHIP_motifs/Processed_PFMs_jaspar_FUNSEQ_INPUT_noVDRrBVs.txt";
 my $PLOT_EXT = 'pdf';
 
 my $INPUT_RIS_DIR;
