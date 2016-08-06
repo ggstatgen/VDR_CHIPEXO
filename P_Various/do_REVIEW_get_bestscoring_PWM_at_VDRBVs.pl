@@ -45,7 +45,7 @@ use Getopt::Long;
 
 
 my $BEDTOOLS = `which bedtools`; chomp $BEDTOOLS;
-my $RSCRIPT = `which RRscript`; chomp $RSCRIPT;
+my $RSCRIPT = `which Rscript`; chomp $RSCRIPT;
 
 my $IN_VDRBV = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/Output_noDBRECUR.vcf";
 #my $IN_VDRBV = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/SUPPL_DATA_Output_noDBRECUR_REP_hg19.vcf";
@@ -82,8 +82,8 @@ unless($INPUT_RIS_DIR){
 }
 print "Minimum PScanChIP score set to $MIN_SCORE\n" if ($MIN_SCORE);
 
-#my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
-my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRrBVs_RXRA-VDR_MA0074.1_sites.ris";
+my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRBVs_RXRA-VDR_MA0074.1_sites.ris";
+#my $RXR_VDR_RIS = "Pscanchip_hg19_bkgGM12865_Jaspar_VDRrBVs_RXRA-VDR_MA0074.1_sites.ris";
 my $RXR_VDR_PATH = $INPUT_RIS_DIR . '/' . $RXR_VDR_RIS;
 
 get_motif_lengths($PWM_FILE, \%JASPAR_MOTIF);

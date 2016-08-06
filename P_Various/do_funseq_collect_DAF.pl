@@ -43,9 +43,9 @@ use IO::Zlib;
 #-save 1kg variants in hash. Data to keep is AFR_AF and EUR_AF
 
 my $infile;
-my $INPUT_MOTIF_FILE = '/net/isi-scratch/giuseppe/tools/funseq2-1.0/data/ENCODE.tf.bound.union.bed'; #hg19
-my $INPUT_VARIANTS = '/net/isi-scratch/giuseppe/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz'; #b37
-my $INPUT_ALLELESEQ_RAW = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt"; #b37
+my $INPUT_MOTIF_FILE = '/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/data/ENCODE.tf.bound.union.bed'; #hg19
+my $INPUT_VARIANTS = '/lustre/scratch110/sanger/gg14/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz'; #b37
+my $INPUT_ALLELESEQ_RAW = "/lustre/scratch110/sanger/gg14/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt"; #b37
 my $motif_name = 'VDR_JASPAR';
 my $ENH_ONLY;
 my $subset_bed; #if you only want to collect data for positions in an external bed file (eg CLASS I sites)

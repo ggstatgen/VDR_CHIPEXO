@@ -70,8 +70,11 @@ use IO::Zlib;
 #you need to distinguish the cases [ (+,+) and (-,-) ] from [(+,-) and (-,+) ]
 
 my $infile;
-my $INFILE_ALLELESEQ_RAW = "/net/isi-scratch/giuseppe/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt";
-my $INPUT_VARIANTS = '/net/isi-scratch/giuseppe/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz';
+
+
+
+my $INFILE_ALLELESEQ_RAW = "/lustre/scratch110/sanger/gg14/VDR/ALLELESEQ/RESULTS/_RAW/interestingHets_vdrchipexo.txt";
+my $INPUT_VARIANTS = '/lustre/scratch110/sanger/gg14/VDR/VARIANTS/ALLELESEQ_20SAMPLES/ALLELESEQ_20samples_merged.vcf.gz';
 my $motif_name = 'VDR_JASPAR';
 my $ENH_ONLY;
 my $subset_bed; #if you only want to collect data for positions in an external bed file (eg CLASS I sites)
@@ -82,8 +85,8 @@ GetOptions(
         'sym'      =>\$sym_variants,
         'enh'      =>\$ENH_ONLY
 ); 
-#$infile = "/net/isi-scratch/giuseppe/tools/funseq2-1.0/out_allsamples_plus_qtl_ancestral/Output.vcf";
-#$subset_bed = "/net/isi-scratch/giuseppe/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_classI.bed";
+#$infile = "/lustre/scratch110/sanger/gg14/VDR/FUNSEQ2/out_allsamples_plus_qtl_ancestral/Output.vcf";
+#$subset_bed = "/lustre/scratch110/sanger/gg14/VDR/POOLED_4/07_BAM_STAMPY_MIN21_RBL/d_CONSENSUS_PEAKSET_GEM_MACS/d_motif_scan_pscanchip/Pscanchip_occurrences_VDRRXR_jaspar_classI.bed";
 
 if(!$infile){
 	print "USAGE: do_funseq_collect_MOTIFBR_gtph.pl -i=<INFILE> -subset=<SUBSET_BED> -sym -enh\n";
