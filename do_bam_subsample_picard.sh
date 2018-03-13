@@ -17,7 +17,6 @@
 #RANDOM_SEED=Long	Random seed to use if reproducibilty is desired. Setting to null will cause multiple invocations to produce different results. Default value: 1. This option can be set to 'null' to clear the default value.
 #PROBABILITY=Double	The probability of keeping any individual read, between 0 and 1. Default value: 1.0. This option can be set to 'null' to clear the default value. 
 
-
 if [ ! $# == 2 ]; then
         echo "Usage: `basename $0` <PATH_DATA> <PROBABILITY>"
         echo "PATH_DATA - directory containing the input .bam files"
